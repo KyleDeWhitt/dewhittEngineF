@@ -1,18 +1,18 @@
-/* src/index.css */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  color-scheme: dark;
 }
 
-/* 👇 CRITICAL FIX: Removes default white space so the app fits perfectly */
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* 👈 Hides the browser's scrollbar so ONLY the 3D one exists */
-  background-color: #000000;
   width: 100vw;
   height: 100vh;
+  overflow: hidden; /* Only the 3D scrollbar works */
+  background-color: #050a14;
+  color: white;
 }
 
 #root {
@@ -20,17 +20,330 @@ body {
   height: 100%;
 }
 
-/* Optional: Make the scrollbar look nicer (Webkit only) */
+/* --- UTILITIES --- */
+h1, h2, h3, p, ul, li {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+/* --- SHARED GLASS STYLES --- */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: left;
+}
+
+/* --- COMPARISON SECTION --- */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.comparison-card {
+  /* Inherits glass styles manually below or via composition */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: left;
+}
+
+.comparison-card.bad {
+  border-top: 4px solid #444; 
+}
+
+.comparison-card.good {
+  border-top: 4px solid #FFD700; 
+  background: rgba(255, 215, 0, 0.05); /* Subtle gold tint */
+}
+
+.comparison-card h3 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.comparison-card li {
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+}
+
+.comparison-card li::before {
+  content: '•';
+  margin-right: 10px;
+  color: #555;
+}
+
+.comparison-card.good li::before {
+  content: '✓';
+  color: #FFD700;
+}
+
+/* --- ENGINE CARD --- */
+.engine-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border-radius: 30px;
+  padding: 50px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: left;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.engine-specs {
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+  gap: 40px;
+  margin-top: 30px;
+}
+
+.spec-item h3 {
+  color: #FFD700;
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spec-item p {
+  color: #ccc;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* --- BUTTONS --- */
+button {
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.2s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+/* --- CUBE SPINNER ANIMATION --- */
+.cube-spinner {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: spin 4s infinite linear;
+}
+
+.cube-face {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 2px solid #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.cube-face:nth-child(1) { transform: rotateY(0deg) translateZ(20px); }
+.cube-face:nth-child(2) { transform: rotateY(90deg) translateZ(20px); }
+.cube-face:nth-child(3) { transform: rotateY(180deg) translateZ(20px); }
+.cube-face:nth-child(4) { transform: rotateY(-90deg) translateZ(20px); }
+.cube-face:nth-child(5) { transform: rotateX(90deg) translateZ(20px); }
+.cube-face:nth-child(6) { transform: rotateX(-90deg) translateZ(20px); }
+
+@keyframes spin {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .comparison-grid, .engine-specs {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Fix for Drei Scroll Container Z-Index */
+div[style*="overflow"] {
+    z-index: 10 !important;
+}
+
+/* ... (Keep all your existing CSS above) ... */
+
+/* 👇 NEW: 3D Wireframe Cube Animation */
+.cube-spinner {
+  width: 30px;
+  height: 30px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: spin 5s infinite linear;
+  margin-right: 15px; /* Spacing from text */
+}
+
+.cube-face {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #FFD700; /* Gold Wireframe */
+  background: rgba(255, 215, 0, 0.1); /* Slight gold tint */
+  box-sizing: border-box;
+}
+
+/* Position the 6 faces */
+.cube-face:nth-child(1) { transform: rotateY(0deg) translateZ(15px); }
+.cube-face:nth-child(2) { transform: rotateY(90deg) translateZ(15px); }
+.cube-face:nth-child(3) { transform: rotateY(180deg) translateZ(15px); }
+.cube-face:nth-child(4) { transform: rotateY(-90deg) translateZ(15px); }
+.cube-face:nth-child(5) { transform: rotateX(90deg) translateZ(15px); }
+.cube-face:nth-child(6) { transform: rotateX(-90deg) translateZ(15px); }
+
+@keyframes spin {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+/* ... (Keep all your existing CSS) ... */
+
+/* 👇 NEW: Custom Premium Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 12px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #000; 
+  background: #0b1121; /* Matches page background */
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #333; 
-  border-radius: 5px;
+  background: #334155; /* Dark Slate */
+  border-radius: 6px;
+  border: 3px solid #0b1121; /* Creates a padding effect */
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #009A44; 
+  background: #FFD700; /* Turns Gold on hover */
+}
+
+/* 👇 NEW: Mobile Responsiveness */
+@media (max-width: 768px) {
+  /* Shrink huge headlines */
+  h1 {
+    font-size: 3rem !important; 
+  }
+  
+  h2 {
+    font-size: 2rem !important;
+  }
+
+  /* Stack navigation */
+  nav {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  /* Adjust card padding */
+  .engine-card, .comparison-card {
+    padding: 25px;
+  }
+  
+  /* Hide the cube on very small screens if needed */
+  .cube-spinner {
+    transform: scale(0.8);
+  }
+}
+
+/* ... (Keep existing CSS) ... */
+
+/* 👇 NEW: CTA Card Style */
+.cta-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border-radius: 40px; /* Extra round for a friendly feel */
+  padding: 60px 40px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+
+/* --- AUTH PAGES --- */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #0b1121;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  /* Inherit Glass Style */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border-radius: 30px;
+  padding: 50px 40px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.auth-input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.auth-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-sizing: border-box; /* Fixes padding width issues */
+}
+
+.auth-input:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.auth-link {
+  color: #FFD700;
+  text-decoration: none;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.auth-link:hover {
+  opacity: 0.8;
 }

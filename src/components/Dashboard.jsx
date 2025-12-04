@@ -1,148 +1,124 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
-import axios from 'axios'; 
-import SubscribeButton from '../components/SubscribeButton';
-// 👇 1. Import your new 3D Scene
-import ThreeScene from '../components/ThreeScene';
-
-// Define the Base URL needed for other routes
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { Canvas } from '@react-three/fiber';
+import { Environment, OrbitControls } from '@react-three/drei';
+import { Model as Logo } from './Logo'; // We render their "Project" live
 
 function Dashboard() {
     const { user, logout } = useAuth();
     
-    // State to hold data from the backend
-    const [goals, setGoals] = useState([]);
-    const [recentLogs, setRecentLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Mock Data - In the future, this comes from your Database
+    const projectStatus = "Phase 2: 3D Modeling";
+    const progress = 40; // Percentage
 
-    const displayName = user?.name || 'Client'; 
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            const token = localStorage.getItem('authToken'); 
-
-            if (!token) {
-                 setLoading(false);
-                 logout(); 
-                 return;
-            }
-
-            try {
-                const config = {
-                    headers: { Authorization: `Bearer ${token}` }
-                };
-
-                const [goalsRes, logsRes] = await Promise.all([
-                    axios.get(`${BASE_URL}/api/goals`, config),
-                    axios.get(`${BASE_URL}/api/logs`, config)
-                ]);
-
-                // 👇 This was likely the broken line in your file
-                setGoals(goalsRes.data.goals || []);
-                setRecentLogs(logsRes.data.logs || []);
-            } catch (error) {
-                console.error("Error fetching dashboard data:", error);
-                if (error.response?.status === 401) {
-                     logout();
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [logout]);
-
-    const totalWorkouts = recentLogs.length;
-
-    // --- RENDER CODE ---
     return (
-        <div className="dashboard-container">
-            <header style={{ marginBottom: '2rem' }}>
-                <h1>Welcome Back, {displayName}!</h1>
-                <nav className="main-nav" style={{ display: 'flex', gap: '15px' }}>
-                    <Link to="/dashboard">Dashboard</Link>
-                    <Link to="/workouts">Workouts</Link>
-                    <Link to="/nutrition">Nutrition</Link>
-                    <Link to="/progress">Progress</Link>
-                </nav>
-            </header>
+        <div style={{ 
+            minHeight: '100vh', 
+            background: '#0b1121', 
+            color: 'white', 
+            padding: '40px',
+            fontFamily: "'Inter', sans-serif"
+        }}>
             
-            <main className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-                
-                {/* 1. Key Metrics Section */}
-                <section className="metrics-card" style={{ border: '1px solid #333', padding: '20px', borderRadius: '8px' }}>
-                    <h2>📊 Your Progress</h2>
-                    {loading ? (
-                        <p>Loading stats...</p>
-                    ) : (
-                        <div>
-                            <p><strong>Total Workouts:</strong> {totalWorkouts}</p>
-                            <p><strong>Active Goals:</strong> {goals.length}</p>
-                            {goals.length > 0 && (
-                                <div style={{ marginTop: '10px' }}>
-                                    <strong>Latest Goal:</strong>
-                                    <p>"{goals[0].description}" ({goals[0].status})</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </section>
-
-                {/* 2. Today's Workout Section */}
-                <section className="workout-card" style={{ border: '1px solid #333', padding: '20px', borderRadius: '8px' }}>
-                    <h2>🏋️ Recent Activity</h2>
-                    {loading ? (
-                        <p>Loading activity...</p>
-                    ) : recentLogs.length > 0 ? (
-                        <ul>
-                            {recentLogs.slice(0, 3).map((log) => (
-                                <li key={log.id} style={{ marginBottom: '8px' }}>
-                                    {log.date}: <strong>{log.exercise}</strong> - {log.weight}lbs ({log.sets}x{log.reps})
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p>No workouts logged yet. Go hit the gym! 💪</p>
-                    )}
-                </section>
-
-                {/* 3. Membership Section */}
-                <section className="membership-card" style={{ border: '1px solid #333', padding: '20px', borderRadius: '8px', background: '#1a1a1a' }}>
-                    <h2>🚀 Membership Status</h2>
-                    <p style={{ marginBottom: '15px' }}>
-                        <strong>Current Plan:</strong> {user?.planTier === 'premium' ? 'Premium 🌟' : 'Free Tier'}
-                    </p>
-                    
-                    {user?.planTier !== 'premium' && (
-                        <div>
-                            <p style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: '15px' }}>
-                                Unlock unlimited goals and advanced 3D analytics.
-                            </p>
-                            <SubscribeButton />
-                        </div>
-                    )}
-                </section>
-                
-                {/* 4. 👇 UPDATED: 3D Visualization */}
-                <section className="three-d-card" style={{ gridColumn: '1 / -1', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
-                    <h2 style={{ padding: '20px 20px 0 20px' }}>✨ Interactive 3D View</h2>
-                    <div style={{ height: '400px', width: '100%', cursor: 'grab' }}>
-                        {/* The new component renders here */}
-                        <ThreeScene />
-                    </div>
-                </section>
-
-            </main>
-            
-            <footer style={{ marginTop: '2rem' }}>
-                <button onClick={logout} style={{ padding: '8px 16px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            {/* 1. HEADER */}
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+                <div>
+                    <h1 style={{ fontSize: '2rem', margin: 0 }}>Project <span style={{ color: '#FFD700' }}>Alpha</span></h1>
+                    <p style={{ color: '#888', margin: 0 }}>Client Portal • {user?.email || 'Guest'}</p>
+                </div>
+                <button 
+                    onClick={logout}
+                    style={{ 
+                        background: 'transparent', 
+                        border: '1px solid #334155', 
+                        color: '#ccc', 
+                        padding: '10px 20px', 
+                        borderRadius: '20px' 
+                    }}
+                >
                     Log Out
-                </button> 
-            </footer>
+                </button>
+            </header>
+
+            {/* 2. DASHBOARD GRID */}
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                gap: '30px'
+            }}>
+
+                {/* CARD 1: LIVE PREVIEW (The 3D Hero) */}
+                <div className="glass-card" style={{ gridColumn: 'span 2', height: '400px', position: 'relative', overflow: 'hidden', padding: 0 }}>
+                    <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Live Asset Preview</h3>
+                        <span style={{ color: '#00bdff', fontSize: '0.8rem', letterSpacing: '1px' }}>INTERACTIVE VIEW</span>
+                    </div>
+                    
+                    {/* Embedded 3D Scene */}
+                    <Canvas camera={{ position: [0, 0, 8], fov: 40 }}>
+                        <ambientLight intensity={1.5} />
+                        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={5} />
+                        <Environment preset="city" />
+                        <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={2} />
+                        {/* Reusing your Logo component as the "Project" */}
+                        <Logo /> 
+                    </Canvas>
+                </div>
+
+                {/* CARD 2: PROJECT STATUS */}
+                <div className="glass-card">
+                    <h3 style={{ color: '#FFD700', marginBottom: '20px' }}>Current Status</h3>
+                    
+                    <div style={{ marginBottom: '30px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{projectStatus}</span>
+                            <span style={{ color: '#00bdff' }}>{progress}%</span>
+                        </div>
+                        {/* Custom Progress Bar */}
+                        <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
+                            <div style={{ width: `${progress}%`, height: '100%', background: '#00bdff', borderRadius: '4px', boxShadow: '0 0 10px #00bdff' }}></div>
+                        </div>
+                    </div>
+
+                    <ul style={{ padding: 0 }}>
+                        <li style={{ color: '#888', textDecoration: 'line-through' }}>✓ Phase 1: Discovery</li>
+                        <li style={{ color: 'white', fontWeight: 'bold' }}>⟳ Phase 2: 3D Modeling</li>
+                        <li style={{ color: '#555' }}>• Phase 3: React Integration</li>
+                        <li style={{ color: '#555' }}>• Phase 4: Deployment</li>
+                    </ul>
+                </div>
+
+                {/* CARD 3: BILLING / SPECS */}
+                <div className="glass-card">
+                    <h3 style={{ color: '#FFD700', marginBottom: '20px' }}>Subscription</h3>
+                    
+                    <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>$500</span>
+                        <span style={{ color: '#888', marginLeft: '5px' }}>/ month</span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#00ff41' }}>
+                        <span style={{ width: '10px', height: '10px', background: '#00ff41', borderRadius: '50%' }}></span>
+                        Active • Next Invoice Dec 15
+                    </div>
+
+                    <button style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: '8px', border: 'none' }}>
+                        Manage Payment Method
+                    </button>
+                </div>
+
+                {/* CARD 4: ACTIONS */}
+                <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <h3 style={{ color: '#FFD700' }}>Quick Actions</h3>
+                    <button style={{ padding: '15px', background: '#FFD700', color: 'black', borderRadius: '10px', fontWeight: 'bold', border: 'none' }}>
+                        Upload New Assets
+                    </button>
+                    <button style={{ padding: '15px', background: 'transparent', border: '1px solid #FFD700', color: '#FFD700', borderRadius: '10px', fontWeight: 'bold' }}>
+                        Request Revisions
+                    </button>
+                </div>
+
+            </div>
         </div>
     );
 }

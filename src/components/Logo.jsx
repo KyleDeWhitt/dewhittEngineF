@@ -8,60 +8,79 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 export function Model(props) {
-  const { nodes } = useGLTF('/logo.glb')
+  const { nodes } = useGLTF('/Logo.glb')
   const groupRef = useRef()
   const scroll = useScroll()
 
   useFrame((state, delta) => {
-    // 1. Get Scroll Position
-    const scrollOffset = scroll?.offset || 0; // Safe fallback if scroll is missing
+    const scrollOffset = scroll?.offset || 0; 
+    const mouseX = state.mouse.x;
+    const mouseY = state.mouse.y;
 
     if (groupRef.current) {
-        // 2. Gentle Float (Bobbing up and down)
-        groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
         
-        // 3. Tilt with Scroll
-        // As you scroll down, the logo tilts up to look at you
-        groupRef.current.rotation.x = scrollOffset * 0.5;
+        // --- 1. CINEMATIC FLY-IN ---
+        const mainText = groupRef.current.children[0];
+        const subText = groupRef.current.children[1];
+
+        // Targets (Increased gap to -1.5 for better separation)
+        const targetMainY = 0.25; 
+        const targetSubY = -1.5; 
+
+        // Smooth Fly-In
+        mainText.position.y = THREE.MathUtils.lerp(mainText.position.y, targetMainY, 0.02);
+        subText.position.y = THREE.MathUtils.lerp(subText.position.y, targetSubY, 0.02);
+
+        // --- 2. SCROLL PUSH (The Fix) ---
+        // As you scroll down (offset goes 0 -> 1), push Z back from 0 to -20
+        // This moves the logo deep into the background so it doesn't fight the text.
+        const targetZ = scrollOffset * -20;
+        groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, targetZ, 0.05);
+
+        // --- 3. FLOAT & MOUSE TRACKING ---
+        const floatY = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+        groupRef.current.position.y = floatY;
         
-        // 4. Subtle Mouse Follow (Optional "Alive" feel)
-        // Adds a tiny bit of rotation on Y axis constantly
-        groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.2) * 0.1;
+        // Rotate towards mouse
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, mouseX * 0.2, 0.05);
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -mouseY * 0.2, 0.05);
     }
   })
 
   return (
     <group {...props} dispose={null} ref={groupRef}>
       
-      {/* 1. "DeWhitt" - Brushed Gold */}
+      {/* 1. "DeWhitt" */}
       <mesh 
         geometry={nodes.Logo_Main.geometry} 
-        position={[0.094, 0.25, -0.891]} // Adjusted Y slightly up
-        rotation={[Math.PI / 2, 0, 0]}   // Flips it upright
+        position={[0.094, 10.0, -0.891]} 
+        rotation={[Math.PI / 2, 0, 0]}   
         scale={1.5}
         castShadow 
         receiveShadow
       >
           <meshStandardMaterial 
-            color="#FFD700"        // Classic Gold
-            metalness={1.0}        // 100% Metal
-            roughness={0.3}        // Brushed texture (not a perfect mirror)
-            envMapIntensity={1.5}  // Reflects the "City" lights
+            color="#FFB800"        
+            metalness={1.0}        
+            roughness={0.15}       
+            envMapIntensity={2.5}  
           />
       </mesh>
 
-      {/* 2. "DESIGNS" - Matte Black */}
+      {/* 2. "DESIGNS" */}
       <mesh 
         geometry={nodes.Logo_Sub.geometry} 
-        position={[0.022, -0.75, 1.159]} // Adjusted Y slightly down
+        position={[0.022, -10.0, 1.159]} 
         rotation={[Math.PI / 2, 0, 0]}
-        scale={1.5}
+        scale={1.0}
+        castShadow             
         receiveShadow 
       >
           <meshStandardMaterial 
-            color="#050505"        // Deep Black
-            roughness={1.0}        // Zero shine (Rubber/Velvet look)
-            metalness={0.0}
+            color="#e0e0e0"        
+            roughness={0.4}        
+            metalness={0.8}        
+            envMapIntensity={2}    
           />
       </mesh>
 
@@ -69,4 +88,4 @@ export function Model(props) {
   )
 }
 
-useGLTF.preload('/logo.glb')
+useGLTF.preload('/Logo.glb')

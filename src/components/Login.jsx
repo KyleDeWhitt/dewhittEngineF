@@ -1,90 +1,92 @@
-// src/components/Login.jsx
-
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Link } from 'react-router-dom'; 
-import { useAuth } from '../context/AuthContext'; 
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL;
+function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    
+    const { login } = useAuth();
+    const navigate = useNavigate();
 
-function Login() { 
-  const { login } = useAuth(); 
-  
-  // ✨ FIX: State changed to 'email'
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            await login(email, password);
+            navigate('/dashboard'); 
+        } catch (err) {
+            setError(err.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    return (
+        <div className="auth-container">
+            <div className="auth-card">
+                
+                {/* Header */}
+                <h2 style={{ fontSize: '2.5rem', color: 'white', marginBottom: '10px' }}>
+                    Welcome <span style={{ color: '#FFD700' }}>Back</span>
+                </h2>
+                <p style={{ color: '#888', marginBottom: '40px' }}>
+                    Access your DeWhitt Designs dashboard.
+                </p>
 
-    try {
-      // ✨ FIX: Sending 'email' to match backend expectation
-      const response = await axios.post(`${API_URL}/login`, {
-        email, 
-        password,
-      });
+                {/* Error Message */}
+                {error && (
+                    <div style={{ background: 'rgba(255, 0, 0, 0.1)', border: '1px solid red', color: '#ff6b6b', padding: '10px', borderRadius: '8px', marginBottom: '20px' }}>
+                        {error}
+                    </div>
+                )}
 
-      const { token, user } = response.data;
-      login(token, user); 
-      
-      setEmail(''); 
-      setPassword(''); 
+                {/* Form */}
+                <form onSubmit={handleSubmit}>
+                    <div className="auth-input-group">
+                        <label className="auth-label">EMAIL ADDRESS</label>
+                        <input 
+                            type="email" 
+                            className="auth-input" 
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
 
-    } catch (err) {
-      const message = err.response?.data?.message || 'Server error. Please try again.';
-      setError(message);
-      setPassword(''); 
-    } finally {
-      setLoading(false);
-    }
-  };
+                    <div className="auth-input-group">
+                        <label className="auth-label">PASSWORD</label>
+                        <input 
+                            type="password" 
+                            className="auth-input" 
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
 
-  return (
-    <div className="login-container">
-      <h2>Client Portal Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="input-group">
-          {/* ✨ FIX: Label and Input type updated to Email */}
-          <label htmlFor="email">Email Address:</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={loading}
-          />
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        style={{ width: '100%', padding: '15px', borderRadius: '50px', background: '#FFD700', color: 'black', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px' }}
+                    >
+                        {loading ? 'Accessing...' : 'Sign In'}
+                    </button>
+                </form>
+
+                {/* Footer Link */}
+                <div style={{ marginTop: '30px', color: '#ccc' }}>
+                    Don't have an account? <Link to="/register" className="auth-link">Start a Project</Link>
+                </div>
+
+            </div>
         </div>
-        <div className="input-group">
-          <label htmlFor="password">Password:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </div>
-        
-        {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
-        
-        <button type="submit" disabled={loading}>
-          {loading ? 'Logging In...' : 'Log In'}
-        </button>
-      </form>
-      
-      <p>
-        Don't have an account? 
-        <Link to="/register">Register Here!</Link>
-      </p>
-      
-    </div>
-  );
+    );
 }
 
 export default Login;
