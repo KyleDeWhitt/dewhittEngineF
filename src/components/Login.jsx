@@ -8,6 +8,7 @@ function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     
+    // We assume login() returns the user data so we can check the role
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -16,9 +17,22 @@ function Login() {
         setError('');
         setLoading(true);
         try {
-            await login(email, password);
-            navigate('/dashboard'); 
+            // 1. Perform the login
+            // (Note: The bug saving the wrong token is inside this login() function in AuthContext)
+            const response = await login(email, password);
+            
+            // 2. INTELLIGENT REDIRECT
+            // Check the role and send them to the right "Home Base"
+            if (response && response.user && response.user.role === 'admin') {
+                console.log('👑 Admin detected. Redirecting to Mission Control...');
+                navigate('/admin');
+            } else {
+                console.log('💼 Client detected. Redirecting to Portal...');
+                navigate('/dashboard'); 
+            }
+
         } catch (err) {
+            console.error("Login Error:", err);
             setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);

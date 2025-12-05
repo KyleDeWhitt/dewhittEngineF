@@ -1,5 +1,3 @@
-// src/context/AuthContext.jsx
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
@@ -18,22 +16,50 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Check for token on app start
     const storedToken = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsLoggedIn(true);
+      try {
+        setUser(JSON.parse(storedUser));
+        setIsLoggedIn(true);
+      } catch (e) {
+        // If JSON fails, clear corrupted data
+        console.error("Failed to parse user data", e);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
     }
     setIsLoading(false);
   }, []);
   
-  const login = (token, userData) => {
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-    setIsLoggedIn(true);
-    navigate('/dashboard'); 
+  // --------------------------------------------------------
+  // 👇 FIXED LOGIN FUNCTION
+  // Now accepts (email, password), calls API, and saves REAL token
+  // --------------------------------------------------------
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/login`, { email, password });
+      
+      // Extract data from Backend Response
+      const { token, user: userData } = response.data;
+
+      // Save valid credentials
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      setUser(userData);
+      setIsLoggedIn(true);
+
+      // Return the data so Login.jsx can handle the redirect logic
+      return response.data;
+
+    } catch (error) {
+      console.error("Login Request Failed:", error);
+      // Throw error so Login.jsx can display the red box
+      throw new Error(error.response?.data?.message || 'Login failed. Please check your network.');
+    }
   };
   
   const logout = () => {
@@ -46,10 +72,8 @@ export const AuthProvider = ({ children }) => {
   
   const registerUser = async (registrationData) => {
     try {
-      // ✨ FIX: Use the API_URL variable
       const response = await axios.post(`${API_URL}/register`, registrationData); 
       
-      // ✨ FIX: Logic now works because Backend sends token
       const { token, user: userData } = response.data; 
       
       localStorage.setItem('authToken', token);
