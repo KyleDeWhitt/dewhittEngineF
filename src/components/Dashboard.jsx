@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Canvas } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
 
-// 👇 KEEP THIS IMPORT POINTING TO YOUR WORKING LOGO FILE
+// 👇 KEEP THIS EXACTLY AS IS (Do not change your logo file)
 import { Model as Logo } from './Logo'; 
 
 import CheckoutButton from './CheckoutButton'; 
@@ -24,7 +24,7 @@ function Dashboard() {
     const { user, logout } = useAuth();
     const [project, setProject] = useState(null);
     
-    // --- 1. RESPONSIVE STATE (Detect Mobile) ---
+    // Responsive State
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
     useEffect(() => {
@@ -32,7 +32,6 @@ function Dashboard() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    // -------------------------------------------
 
     useEffect(() => {
         const fetchProjectData = async () => {
@@ -61,7 +60,7 @@ function Dashboard() {
             
             <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '20px' : '40px' }}>
                 
-                {/* HEADER - Stacked on Mobile */}
+                {/* HEADER */}
                 <header style={{ 
                     display: 'flex', 
                     flexDirection: isMobile ? 'column' : 'row', 
@@ -91,7 +90,6 @@ function Dashboard() {
                     </button>
                 </header>
 
-                {/* MAIN GRID LAYOUT - 1 Column on Mobile */}
                 <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', 
@@ -101,13 +99,16 @@ function Dashboard() {
                     {/* 1. VISUALIZER */}
                     <div style={{ 
                         gridColumn: isMobile ? 'span 1' : 'span 8', 
-                        height: isMobile ? '400px' : '600px', // Smaller height on phone
+                        height: isMobile ? '400px' : '600px', 
                         position: 'relative', 
                         overflow: 'hidden', 
                         borderRadius: '24px',
                         background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
                         border: '1px solid rgba(255,255,255,0.05)',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        
+                        // 👇 FIX 1: This allows you to scroll the page with your thumb
+                        touchAction: 'pan-y' 
                     }}>
                         <div style={{
                             position: 'absolute', top: 30, left: 30, zIndex: 10,
@@ -125,7 +126,15 @@ function Dashboard() {
                         <Canvas camera={{ position: [0, 0, 8], fov: 40 }}>
                             <ambientLight intensity={1.5} />
                             <Environment preset="city" />
-                            <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={isPremium ? 2 : 0.5} />
+                            
+                            {/* 👇 FIX 2: Disable rotate on mobile so it doesn't grab your thumb */}
+                            <OrbitControls 
+                                enableZoom={false} 
+                                enableRotate={!isMobile} 
+                                autoRotate 
+                                autoRotateSpeed={isPremium ? 2 : 0.5} 
+                            />
+                            
                             <Logo /> 
                         </Canvas>
                     </div>
