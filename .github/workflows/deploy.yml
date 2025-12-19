@@ -19,4 +19,5 @@ jobs:
       - name: 🚀 Force Upload (LFTP)
         run: |
           sudo apt-get install -y lftp
-          lftp -e "set ssl:verify-certificate no; mirror -R --verbose ./dist/ ./public_html/" -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" ${{ secrets.FTP_SERVER }}
+          echo "Starting upload..."
+          lftp -e "set ssl:verify-certificate no; ls; mirror -R --verbose ./dist/ ./; bye" -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" ${{ secrets.FTP_SERVER }}
