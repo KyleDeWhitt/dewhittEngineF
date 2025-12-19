@@ -1,25 +1,36 @@
 name: Deploy to Hostinger
 on:
   push:
-    branches: [ main ]  # Or 'master' if your branch is named that
+    branches: [ main ]
+
 jobs:
   web-deploy:
-    name:  Deploy
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
     steps:
-      - name:  Get latest code
-        uses: actions/checkout@v3
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install Dependencies and Build
+      - name: 🔨 Install Dependencies and Build
         run: |
           npm install
           npm run build
+          echo "------ DEBUG: LISTING FILES ------"
+          ls -R
+          echo "----------------------------------"
 
-      - name: Sync files to Hostinger
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: 📂 Sync files to Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/      # Vite builds to 'dist' by default
+          local-dir: ./dist/
           server-dir: ./public_html/
+          protocol: ftp
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
