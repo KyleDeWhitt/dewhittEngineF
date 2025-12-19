@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 export function Model(props) {
-  const { nodes } = useGLTF('/Logo.glb')
+  const { nodes } = useGLTF('/euro_logo.glb')
   const groupRef = useRef()
   const scroll = useScroll()
 
