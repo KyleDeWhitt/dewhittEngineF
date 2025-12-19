@@ -93,7 +93,7 @@ function ProfileSetup() {
                     />
                 </div>
 
-                <div className="auth-input-group">
+                <div className="auth-input-group" style={{ marginBottom: '30px' }}>
                     <label className="auth-label">INDUSTRY</label>
                     <select 
                         name="industry" 
