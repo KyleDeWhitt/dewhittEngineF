@@ -107,7 +107,7 @@ function RegistrationForm() {
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '20px' }}>
                         <div style={{ flex: 1 }}>
                             <label style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '5px', display: 'block' }}>FIRST NAME</label>
                             <input 
