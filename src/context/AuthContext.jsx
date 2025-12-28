@@ -86,9 +86,19 @@ export const AuthProvider = ({ children }) => {
       if (error.response) {
         console.error("Backend Response:", error.response.data);
       }
+      
+      // Better Error Handling: Check for Validation Arrays or Standard Messages
+      let errorMsg = 'Registration failed. Please try again.';
+      if (error.response?.data?.errors) {
+          // Join multiple validation errors (e.g. "Invalid email, Password too short")
+          errorMsg = error.response.data.errors.map(err => err.msg).join(', ');
+      } else if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+      }
+
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Registration failed. Please try again.',
+        message: errorMsg,
       };
     }
   };
