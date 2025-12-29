@@ -3,14 +3,19 @@
   line-height: 1.5;
   color: white;
   background-color: #050a14; /* Deep Navy Background */
+  overflow-x: hidden; /* Prevent horizontal scroll at root */
+}
+
+html, body, #root {
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
 body {
   margin: 0;
   padding: 0;
-  width: 100vw;
   min-height: 100vh;
-  overflow-x: hidden; /* Allow Vertical Scroll */
 }
 
 /* --- THE GLASS EFFECT --- */
