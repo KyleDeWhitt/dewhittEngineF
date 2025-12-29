@@ -44,12 +44,11 @@ export function Model(props) {
       topRef.current = topMesh;
       
       // Position:
-      topMesh.position.set(0, 0, 0); 
+      topMesh.position.set(-10, 0, 0); // Start OFF-SCREEN LEFT
       topMesh.scale.set(1, 1, 1);
       
       // Animation Setup
-      topMesh.userData.finalZ = 0; 
-      topMesh.position.z -= 5; 
+      topMesh.userData.finalX = 0; 
 
       // --- 2. BOTTOM WORD (SILVER) ---
       bottomMesh.material = new THREE.MeshStandardMaterial({
@@ -60,31 +59,29 @@ export function Model(props) {
       bottomRef.current = bottomMesh;
 
       // POSITION FIX:
-      // y = 0.5 -> Forward (Depth)
-      // z = 1.4 -> DOWN (Height). Increased from 0.7 to 1.4 to clear the gap.
-      bottomMesh.position.set(0, 0.5, 1.4); 
+      // Start OFF-SCREEN RIGHT
+      bottomMesh.position.set(10, 0.5, 1.4); 
       bottomMesh.scale.set(1, 1, 1);
 
       // Animation Setup
-      bottomMesh.userData.finalZ = 1.4; 
-      bottomMesh.position.z += 5; 
+      bottomMesh.userData.finalX = 0; 
     }
   }, [scene]);
 
   useFrame((state, delta) => {
-    // Smooth Animation
+    // Smooth Animation (Slide X)
     if (topRef.current) {
-      topRef.current.position.z = THREE.MathUtils.lerp(
-        topRef.current.position.z,
-        topRef.current.userData.finalZ,
-        delta * 3
+      topRef.current.position.x = THREE.MathUtils.lerp(
+        topRef.current.position.x,
+        topRef.current.userData.finalX,
+        delta * 2.5 // Slightly slower for elegance
       );
     }
     if (bottomRef.current) {
-      bottomRef.current.position.z = THREE.MathUtils.lerp(
-        bottomRef.current.position.z,
-        bottomRef.current.userData.finalZ,
-        delta * 3
+      bottomRef.current.position.x = THREE.MathUtils.lerp(
+        bottomRef.current.position.x,
+        bottomRef.current.userData.finalX,
+        delta * 2.5
       );
     }
   });
