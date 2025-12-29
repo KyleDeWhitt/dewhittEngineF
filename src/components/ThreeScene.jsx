@@ -57,7 +57,7 @@ const ThreeScene = () => {
 
         <Suspense fallback={null}>
           {/* Shift Model RIGHT on mobile to counter the left-offset */}
-          <Model position={[isMobile ? 1.5 : 0, 0, 0]} />
+          <Model position={[isMobile ? 0.6 : 0, 0, 0]} />
         </Suspense>
 
         <CameraRig />
