@@ -23,14 +23,21 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100%', minHeight: '200vh' }}>
+    <div style={{ 
+      position: 'relative', 
+      width: '100%', 
+      minHeight: '200vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }}>
       
       {/* --- GLASS NAVIGATION HEADER --- */}
       <nav style={{
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
+        right: 0,
         boxSizing: 'border-box',
         padding: '20px 5%',
         display: 'flex',
