@@ -23,6 +23,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: ./domains/darkseagreen-hamster-262740.hostingersite.com/public_html/
-          protocol: ftp
+          server-dir: public_html/
+          protocol: ftps
           port: 21
+          security: loose
+          timeout: 300000
