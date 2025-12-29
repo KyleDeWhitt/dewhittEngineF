@@ -26,13 +26,6 @@ function CameraRig() {
       targetZ, 
       delta * 2 
     );
-    
-    // Smooth X Movement (Centering adjustment)
-    state.camera.position.x = THREE.MathUtils.lerp(
-      state.camera.position.x, 
-      targetX, 
-      delta * 2 
-    );
   });
   return null;
 }
@@ -63,8 +56,8 @@ const ThreeScene = () => {
         />
 
         <Suspense fallback={null}>
-          {/* Removed <Center> to rely on manual geometry centering in Logo.jsx */}
-          <Model />
+          {/* Shift Model RIGHT on mobile to counter the left-offset */}
+          <Model position={[isMobile ? 1.5 : 0, 0, 0]} />
         </Suspense>
 
         <CameraRig />
