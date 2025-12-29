@@ -7,6 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 function VerifyEmail() {
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState('verifying'); // 'verifying', 'success', 'error'
+    const [errorMsg, setErrorMsg] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -15,12 +16,13 @@ function VerifyEmail() {
 
             if (!token) {
                 setStatus('error');
+                setErrorMsg('No token provided in URL');
                 return;
             }
 
             try {
                 // 👇 Call the new backend route we just made
-                await axios.post(`${API_URL}/api/auth/verify-email`, { token });
+                const response = await axios.post(`${API_URL}/api/auth/verify-email`, { token });
                 setStatus('success');
                 
                 // Redirect to login after 3 seconds
@@ -31,6 +33,7 @@ function VerifyEmail() {
             } catch (error) {
                 console.error("Verification failed:", error);
                 setStatus('error');
+                setErrorMsg(error.response?.data?.message || error.message || 'Unknown error occurred');
             }
         };
 
@@ -73,11 +76,13 @@ function VerifyEmail() {
                 {status === 'error' && (
                     <>
                         <h2 style={{ color: '#ef4444' }}>❌ Verification Failed</h2>
-                        <p>The link may be invalid or expired.</p>
+                        <p style={{ color: '#fda4af', marginBottom: '10px' }}>{errorMsg}</p>
+                        <p style={{ fontSize: '0.7rem', color: '#666', marginBottom: '20px' }}>
+                            Target API: <code style={{ color: '#94a3b8' }}>{API_URL}</code>
+                        </p>
                         <button 
                             onClick={() => navigate('/login')}
                             style={{
-                                marginTop: '20px',
                                 background: '#FFD700',
                                 color: 'black',
                                 border: 'none',
