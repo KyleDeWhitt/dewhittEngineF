@@ -30,6 +30,11 @@ export function Model(props) {
       const topMesh = meshes[0];     // "DeWhitt"
       const bottomMesh = meshes[1];  // "DESIGNS"
 
+      // --- FORCE CENTER GEOMETRY ---
+      // This ensures the 0,0,0 point is the exact middle of the words
+      topMesh.geometry.center();
+      bottomMesh.geometry.center();
+
       // --- 1. TOP WORD (GOLD) ---
       topMesh.material = new THREE.MeshStandardMaterial({
         color: '#FFD700',

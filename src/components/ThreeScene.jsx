@@ -30,12 +30,14 @@ function CameraRig() {
 }
 
 const ThreeScene = () => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 800;
+  
   return (
     <div style={{ width: '100%', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 0 }}>
       <Canvas 
         dpr={2} // Keeps it sharp
         shadows={false} // Disabling shadows fixes the lag
-        camera={{ position: [0, 0, 12], fov: 45 }}
+        camera={{ position: [0, 0, 12], fov: isMobile ? 50 : 45 }}
       >
         
         {/* --- LIGHTING --- */}
