@@ -55,9 +55,8 @@ const ThreeScene = () => {
         />
 
         <Suspense fallback={null}>
-          <Center> {/* <--- THIS IS KEY: It forces the logo to the exact middle 0,0,0 */}
-             <Model />
-          </Center>
+          {/* Removed <Center> to rely on manual geometry centering in Logo.jsx */}
+          <Model />
         </Suspense>
 
         <CameraRig />
