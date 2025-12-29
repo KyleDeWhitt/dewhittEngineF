@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ThreeScene from './ThreeScene';
-import TrustedBy from './TrustedBy';
 import InteractiveLogo from './InteractiveLogo';
 import Services from './Services';
 
@@ -120,7 +119,6 @@ const LandingPage = () => {
         </div>
 
         <InteractiveLogo />
-        <TrustedBy /> 
         <Services />
 
         <section style={{ 
