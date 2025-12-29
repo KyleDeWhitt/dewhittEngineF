@@ -16,6 +16,7 @@ function CameraRig() {
     // If width < 800px (mobile), pull back to z=22 so the logo fits
     const isMobile = size.width < 800;
     const startZ = isMobile ? 22 : 12; 
+    const targetX = isMobile ? -1.5 : 0; // Shift camera left to center the logo on mobile
 
     const targetZ = startZ + (scrollProgress * 15);
     
@@ -23,6 +24,13 @@ function CameraRig() {
     state.camera.position.z = THREE.MathUtils.lerp(
       state.camera.position.z, 
       targetZ, 
+      delta * 2 
+    );
+    
+    // Smooth X Movement (Centering adjustment)
+    state.camera.position.x = THREE.MathUtils.lerp(
+      state.camera.position.x, 
+      targetX, 
       delta * 2 
     );
   });
