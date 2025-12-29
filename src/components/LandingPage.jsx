@@ -94,6 +94,11 @@ const LandingPage = () => {
         </div>
       </nav>
 
+      {/* DEBUG MARKER */}
+      <div style={{ position: 'fixed', bottom: 5, right: 5, zIndex: 9999, color: 'lime', fontSize: '10px', opacity: 0.5 }}>
+        v_DEBUG_SHIFT_RIGHT
+      </div>
+
       <ThreeScene />
 
       <div style={{ position: 'relative', zIndex: 10 }}>
