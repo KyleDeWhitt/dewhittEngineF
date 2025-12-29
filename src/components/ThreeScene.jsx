@@ -16,7 +16,6 @@ function CameraRig() {
     // If width < 800px (mobile), pull back to z=22 so the logo fits
     const isMobile = size.width < 800;
     const startZ = isMobile ? 22 : 12; 
-    const targetX = isMobile ? -1.5 : 0; // Shift camera left to center the logo on mobile
 
     const targetZ = startZ + (scrollProgress * 15);
     
@@ -57,7 +56,7 @@ const ThreeScene = () => {
 
         <Suspense fallback={null}>
           {/* Shift Model RIGHT on mobile to counter the left-offset */}
-          <Model position={[isMobile ? 0.4 : 0, 0, 0]} />
+          <Model position={[isMobile ? 0.2 : 0, 0, 0]} />
         </Suspense>
 
         <CameraRig />
