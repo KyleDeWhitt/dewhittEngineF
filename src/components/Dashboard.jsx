@@ -53,19 +53,16 @@ function Dashboard() {
     const activePhaseIndex = PHASES.findIndex(p => p.name === status);
     const safeActiveIndex = activePhaseIndex === -1 ? 0 : activePhaseIndex;
 
+    console.log("Rendering Dashboard. Project:", project);
+
     return (
         <div style={{ 
-            position: 'absolute',
-            top: 0,
-            left: 0,
+            minHeight: '100vh',
             width: '100%',
-            height: '100%', 
-            overflowY: 'scroll', 
-            overflowX: 'hidden',
             background: BG_COLOR, 
             color: 'white', 
             fontFamily: "'Inter', sans-serif",
-            WebkitOverflowScrolling: 'touch' 
+            overflowX: 'hidden'
         }}>
             
             <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '20px' : '40px' }}>
@@ -84,7 +81,7 @@ function Dashboard() {
                             <span style={{ color: GOLD_COLOR }}>{project?.name || 'Alpha'}</span>
                         </h1>
                         <p style={{ color: '#64748b', margin: '5px 0 0 0', fontSize: '0.9rem' }}>
-                            {project?.clientName || user?.email} • {isPremium ? 'Premium Plan' : 'Preview Mode'}
+                            {user?.email} • {isPremium ? 'Premium Plan' : 'Preview Mode'}
                         </p>
                     </div>
                     <button onClick={logout} style={{ 
@@ -140,7 +137,6 @@ function Dashboard() {
                                 autoRotateSpeed={isPremium ? 2 : 0.5} 
                             />
                             
-                            {/* 👇 FIX: scale Z is now negative (-0.5) to fix the depth order */}
                             <group scale={[-0.5, 0.5, -0.5]} rotation={[0, Math.PI, 0]}>
                                 <Logo />
                             </group>
