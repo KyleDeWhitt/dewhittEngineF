@@ -231,13 +231,7 @@ export default function Services() {
           <div style={{ width: '60px', height: '4px', background: '#FFD700', margin: '0 auto', borderRadius: '2px' }}></div>
        </div>
 
-       <div style={{
-         display: 'grid',
-         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-         gap: '40px',
-         maxWidth: '1200px',
-         margin: '0 auto'
-       }}>
+       <div className="service-grid">
          {serviceData.map((service, index) => (
             <ServiceCard key={index} item={service} />
          ))}

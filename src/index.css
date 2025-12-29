@@ -40,8 +40,24 @@ h1, h2, h3, p { margin: 0; }
   color: #FFD700;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: #050a14; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #FFD700; }
+
+/* --- RESPONSIVE GRIDS --- */
+.service-grid {
+  display: grid;
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  /* Default (Mobile): Stacked */
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .service-grid {
+    /* Tablet/Desktop: Auto-fit with min 300px */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
