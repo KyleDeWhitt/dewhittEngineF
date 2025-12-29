@@ -24,4 +24,6 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: ./domains/darkseagreen-hamster-262740.hostingersite.com/public_html/
-          protocol: ftp
+          protocol: ftps
+          port: 21
+          security: strict
