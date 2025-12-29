@@ -16,7 +16,7 @@ jobs:
           npm install
           npm run build
 
-      - name: 📂 Sync files to Hostinger
+      - name: 📂 Sync files to Hostinger (Secure FTPS)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
