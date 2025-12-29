@@ -57,7 +57,8 @@ const InteractiveLogo = () => {
     }}>
       
       <div style={{
-        width: '600px',
+        width: '100%',
+        maxWidth: '600px',
         height: '400px',
         background: 'rgba(255, 255, 255, 0.03)', 
         borderRadius: '30px',

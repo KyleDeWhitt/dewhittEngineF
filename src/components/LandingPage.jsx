@@ -32,7 +32,7 @@ const LandingPage = () => {
         left: 0,
         width: '100%',
         boxSizing: 'border-box',
-        padding: '20px 40px',
+        padding: '20px 5%',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
