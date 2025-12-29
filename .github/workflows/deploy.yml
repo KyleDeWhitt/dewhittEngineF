@@ -27,3 +27,4 @@ jobs:
           protocol: ftps
           port: 21
           security: loose
+          timeout: 300000
