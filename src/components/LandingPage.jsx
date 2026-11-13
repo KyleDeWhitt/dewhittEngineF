@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ThreeScene from './ThreeScene';
 import InteractiveLogo from './InteractiveLogo';
 import Services from './Services';
+import FeaturedBuild from './FeaturedBuild';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -134,6 +135,7 @@ const LandingPage = () => {
 
         <InteractiveLogo />
         <Services />
+        <FeaturedBuild />
 
         <section style={{ 
           height: '60vh', 
