@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dewhittfit.app",
+      "sha256_cert_fingerprints": [
+        "66:95:A7:83:0E:7F:C0:C5:53:20:88:19:C2:A4:DC:23:A2:D8:F2:C5:FD:D6:7A:79:11:B9:E1:4E:BF:2A:3B:6A"
+      ]
+    }
+  }
+]
