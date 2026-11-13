@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 
 const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
 
@@ -44,7 +44,7 @@ function VerifyEmail() {
 
                     {status === 'success' && (
                         <>
-                            <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>All <span style={{ background: T.highGreen, padding: '0 4px' }}>Set</span>!</MarkerTitle>
+                            <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>All <Highlight color={T.highGreen} style={{ padding: '0 4px' }}>Set</Highlight>!</MarkerTitle>
                             <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>your email is verified.</p>
                             <p style={{ fontSize: '0.9rem', color: T.pencil, marginTop: 8 }}>sending you to sign in…</p>
                         </>
@@ -52,7 +52,7 @@ function VerifyEmail() {
 
                     {status === 'error' && (
                         <>
-                            <MarkerTitle style={{ fontSize: '1.9rem', marginTop: 14 }}>Hmm, that <span style={{ background: T.highPink, padding: '0 4px' }}>link…</span></MarkerTitle>
+                            <MarkerTitle style={{ fontSize: '1.9rem', marginTop: 14 }}>Hmm, that <Highlight color={T.highPink} style={{ padding: '0 4px' }}>link…</Highlight></MarkerTitle>
                             <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>looks expired or invalid.</p>
                             <button onClick={() => navigate('/fit/login')}
                                 style={{ marginTop: 22, fontFamily: MARKER, fontSize: '1rem', background: T.highGreen, border: '1px solid #9ccd7a', borderRadius: 8, padding: '11px 22px', cursor: 'pointer', color: T.ink }}>

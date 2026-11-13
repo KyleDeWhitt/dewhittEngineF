@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 
 const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -79,7 +79,7 @@ function Login() {
                 <Paper style={{ padding: '30px 32px 32px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <Tape rotate={-2}>welcome back</Tape>
-                        <MarkerTitle style={{ fontSize: '2.2rem', marginTop: 14 }}>Sign <span style={{ background: T.highYellow, padding: '0 4px' }}>In</span></MarkerTitle>
+                        <MarkerTitle style={{ fontSize: '2.2rem', marginTop: 14 }}>Sign <Highlight color={T.highYellow} style={{ padding: '0 4px' }}>In</Highlight></MarkerTitle>
                         <p style={{ fontSize: '1rem', color: T.inkSoft, marginTop: 6 }}>back to the journal.</p>
                     </div>
 

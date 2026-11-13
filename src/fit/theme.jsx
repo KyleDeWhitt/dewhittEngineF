@@ -1,5 +1,13 @@
 import React from 'react';
 
+// Fonts are bundled with the app (no Google Fonts request), so the handwriting
+// look is there on first paint instead of flashing a fallback font.
+import '@fontsource/patrick-hand/400.css';
+import '@fontsource/permanent-marker/400.css';
+import '@fontsource/caveat/400.css';
+import '@fontsource/caveat/600.css';
+import '@fontsource/caveat/700.css';
+
 // ── "Gym Rat's Journal" design tokens ──────────────────────────────────────
 // A handwritten, paper-notebook feel: ruled paper, marker headings,
 // highlighter accents, pencil notes, and a red margin line.
@@ -56,6 +64,45 @@ export function Tape({ children, rotate = -3, style }) {
             display: 'inline-block', background: T.tape, borderLeft: '2px dashed rgba(0,0,0,0.12)', borderRight: '2px dashed rgba(0,0,0,0.12)',
             padding: '1px 16px', transform: `rotate(${rotate}deg)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
             fontFamily: MARKER, fontSize: '0.78rem', color: T.inkSoft, ...style,
+        }}>{children}</span>
+    );
+}
+// ── Highlighter motion ─────────────────────────────────────────────────────
+// Injected once so every page that imports the theme gets the keyframes.
+const HL_CSS = `
+.hl-swipe {
+    background-repeat: no-repeat;
+    background-position: 0 55%;
+    background-size: 100% 88%;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    animation: hl-swipe 650ms cubic-bezier(.65,.05,.36,1) both;
+}
+@keyframes hl-swipe {
+    from { background-size: 0% 88%; }
+    to   { background-size: 100% 88%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hl-swipe { animation: none; }
+}
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+`;
+if (typeof document !== 'undefined' && !document.getElementById('fit-theme-css')) {
+    const el = document.createElement('style');
+    el.id = 'fit-theme-css';
+    el.textContent = HL_CSS;
+    document.head.appendChild(el);
+}
+
+// A highlighter stroke that sweeps across the text, like a marker being dragged.
+export function Highlight({ children, color = T.highYellow, delay = 250, style }) {
+    return (
+        <span className="hl-swipe" style={{
+            backgroundImage: `linear-gradient(${color}, ${color})`,
+            animationDelay: `${delay}ms`,
+            ...style,
         }}>{children}</span>
     );
 }

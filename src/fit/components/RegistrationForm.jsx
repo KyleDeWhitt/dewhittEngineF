@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 
 function RegistrationForm() {
     const { registerUser } = useAuth();
@@ -52,7 +52,7 @@ function RegistrationForm() {
                 <div style={{ width: '100%', maxWidth: 440 }}>
                     <Paper style={{ padding: '32px', textAlign: 'center' }}>
                         <Tape rotate={-2}>you're in</Tape>
-                        <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>Check Your <span style={{ background: T.highYellow, padding: '0 4px' }}>Inbox</span></MarkerTitle>
+                        <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>Check Your <Highlight color={T.highYellow} style={{ padding: '0 4px' }}>Inbox</Highlight></MarkerTitle>
                         <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>account created for <strong>{formData.email}</strong>.</p>
                         <div style={{ background: T.highYellow, border: `1px solid ${T.ruled}`, padding: 12, borderRadius: 6, marginTop: 18, fontFamily: FONT }}>
                             click the verification link in your email to activate your account.
@@ -70,7 +70,7 @@ function RegistrationForm() {
                 <Paper style={{ padding: '30px 32px 32px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <Tape rotate={2}>join up</Tape>
-                        <MarkerTitle style={{ fontSize: '2.2rem', marginTop: 14 }}>Start Your <span style={{ background: T.highPink, padding: '0 4px' }}>Journal</span></MarkerTitle>
+                        <MarkerTitle style={{ fontSize: '2.2rem', marginTop: 14 }}>Start Your <Highlight color={T.highPink} style={{ padding: '0 4px' }}>Journal</Highlight></MarkerTitle>
                         <p style={{ fontSize: '1rem', color: T.inkSoft, marginTop: 6 }}>a few details to get you in the books.</p>
                     </div>
 

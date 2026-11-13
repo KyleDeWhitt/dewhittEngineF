@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 
 const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
 
@@ -75,7 +75,7 @@ function ProfileSetup() {
                 <Paper style={{ padding: '28px 30px 30px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <Tape rotate={-2}>first things first</Tape>
-                        <MarkerTitle style={{ fontSize: '2rem', marginTop: 12 }}>Set Your <span style={{ background: T.highPink, padding: '0 4px' }}>Goal</span></MarkerTitle>
+                        <MarkerTitle style={{ fontSize: '2rem', marginTop: 12 }}>Set Your <Highlight color={T.highPink} style={{ padding: '0 4px' }}>Goal</Highlight></MarkerTitle>
                         <p style={{ fontSize: '1rem', color: T.inkSoft, margin: '6px 0 0' }}>
                             Hey {firstName} &mdash; a quick calibration so we can build your plan.
                         </p>

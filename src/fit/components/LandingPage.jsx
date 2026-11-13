@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 
 const deskInk = '#f3ead6';
 const deskMuted = '#bab09c';
@@ -47,10 +47,10 @@ function LandingPage() {
             <header style={{ textAlign: 'center', padding: '9vh 20px 6vh' }}>
                 <Tape rotate={-2}>train. eat. recover. repeat.</Tape>
                 <h1 style={{ fontFamily: MARKER, fontSize: 'clamp(2.5rem, 8vw, 5rem)', lineHeight: 1.05, color: deskInk, fontWeight: 400, margin: '24px 0 8px' }}>
-                    The Lift <span style={{ background: T.highYellow, color: T.ink, padding: '0 8px', borderRadius: 4 }}>Journal</span>
+                    The Lift <Highlight color={T.highYellow} style={{ color: T.ink, padding: '0 8px', borderRadius: 4 }}>Journal</Highlight>
                 </h1>
                 <p style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: deskMuted, maxWidth: 560, margin: '12px auto 28px' }}>
-                    log your workouts, food, and progress \u2014 one page a day. simple. effective.
+                    log your workouts, food, and progress — one page a day. simple. effective.
                 </p>
                 <Link to="/fit/register" style={btn('solid')}>start tracking free</Link>
                 <div style={{ marginTop: 14, fontFamily: FONT, color: deskMuted, fontSize: '0.9rem' }}>

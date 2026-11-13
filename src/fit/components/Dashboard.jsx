@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
-import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
+import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
 import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
@@ -125,7 +125,7 @@ function WorkoutForm({ onSave, busy, weight, unit, initial, onCancel }) {
         detail = `${Number(mins) || 0} min`;
     }
 
-    const inp = { width: '100%', padding: '6px 8px', background: '#fffdf6', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1rem', color: T.ink, boxSizing: 'border-box', outline: 'none' };
+    const inp = { width: '100%', padding: '6px 4px', background: '#fffdf6', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1rem', color: T.ink, boxSizing: 'border-box', outline: 'none' };
     const lbl = { fontFamily: FONT, fontSize: '0.78rem', color: T.pencil, marginBottom: 2 };
 
     const submit = () => {
@@ -169,9 +169,9 @@ function WorkoutForm({ onSave, busy, weight, unit, initial, onCancel }) {
                         <input type="number" value={mins} onChange={(e) => setMins(e.target.value)} style={inp} min="1" />
                     </div>
                 )}
-                <div style={{ width: 96 }}>
+                <div style={{ minWidth: 96 }}>
                     <div style={lbl}>Burn</div>
-                    <div style={{ ...inp, color: T.calorie, fontWeight: 700 }}>&asymp; {kcal} kcal</div>
+                    <div style={{ ...inp, color: T.calorie, fontWeight: 700, whiteSpace: 'nowrap' }}>&asymp; {kcal} kcal</div>
                 </div>
                 <button type="button" disabled={busy} onClick={submit}
                     style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.sticky, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '10px 14px', cursor: 'pointer', color: T.ink, whiteSpace: 'nowrap' }}>
@@ -260,7 +260,7 @@ function FoodSection({ date, onChanged }) {
 
     const prefill = (r) => setForm({ name: r.name, serving: r.serving || '100 g', calories: String(r.calories ?? ''), protein: String(r.protein ?? ''), carbs: String(r.carbs ?? ''), fat: String(r.fat ?? '') });
 
-    const inp = { width: '100%', padding: '6px 8px', background: '#fffdf6', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '0.95rem', color: T.ink, boxSizing: 'border-box', outline: 'none' };
+    const inp = { width: '100%', padding: '6px 4px', background: '#fffdf6', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '0.95rem', color: T.ink, boxSizing: 'border-box', outline: 'none' };
     const lbl = { fontFamily: FONT, fontSize: '0.75rem', color: T.pencil, marginBottom: 2 };
 
     return (
@@ -301,8 +301,8 @@ function FoodSection({ date, onChanged }) {
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); addFood({ name: form.name, serving: form.serving, calories: Number(form.calories) || 0, protein: Number(form.protein) || 0, carbs: Number(form.carbs) || 0, fat: Number(form.fat) || 0 }); }}
-                style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'flex-end', marginTop: 12 }}>
-                <div><div style={lbl}>Name</div><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Food" style={inp} /></div>
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr)) auto', gap: 8, alignItems: 'flex-end', marginTop: 12 }}>
+                <div style={{ gridColumn: '1 / -1' }}><div style={lbl}>Name</div><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Food" style={inp} /></div>
                 <div><div style={lbl}>Kcal</div><input type="number" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} placeholder="0" style={inp} /></div>
                 <div><div style={lbl}>Prot</div><input type="number" value={form.protein} onChange={(e) => setForm({ ...form, protein: e.target.value })} placeholder="0" style={inp} /></div>
                 <div><div style={lbl}>Carbs</div><input type="number" value={form.carbs} onChange={(e) => setForm({ ...form, carbs: e.target.value })} placeholder="0" style={inp} /></div>
@@ -339,7 +339,7 @@ function RecordsSection({ unit }) {
     return (
         <Paper style={{ padding: '22px 26px', marginTop: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
-                <MarkerTitle style={{ fontSize: '1.2rem' }}><span style={{ background: T.highYellow, padding: '0 6px' }}>&#9733; Personal Records</span></MarkerTitle>
+                <MarkerTitle style={{ fontSize: '1.2rem' }}><Highlight color={T.highYellow} style={{ padding: '0 6px' }}>&#9733; Personal Records</Highlight></MarkerTitle>
                 <span style={{ fontFamily: FONT, fontSize: '0.72rem', color: T.pencil }}>estimated 1-rep max (Epley)</span>
             </div>
             <div style={{ marginTop: 4 }}>
