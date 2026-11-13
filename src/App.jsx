@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
@@ -9,6 +9,16 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ProfileSetup from './components/ProfileSetup';
 import AdminDashboard from './components/AdminDashboard';
 import VerifyEmail from './components/VerifyEmail';
+
+// ── DeWhitt Fit (fitness app) — mounted under /fit ────────────────────
+import { AuthProvider as FitAuthProvider } from './fit/context/AuthContext';
+import FitLandingPage from './fit/components/LandingPage';
+import FitLogin from './fit/components/Login';
+import FitRegistrationForm from './fit/components/RegistrationForm';
+import FitDashboard from './fit/components/Dashboard';
+import FitProtectedRoute from './fit/components/ProtectedRoute';
+import FitProfileSetup from './fit/components/ProfileSetup';
+import FitVerifyEmail from './fit/components/VerifyEmail';
 
 const GlobalStyles = () => (
   <style>{`
@@ -48,6 +58,13 @@ const GlobalStyles = () => (
   `}</style>
 );
 
+// Layout that scopes the DeWhitt Fit app with its own auth context.
+const FitAuthLayout = () => (
+  <FitAuthProvider>
+    <Outlet />
+  </FitAuthProvider>
+);
+
 function App() {
   return (
     <Router>
@@ -66,6 +83,18 @@ function App() {
                 <Route path="/admin" element={<AdminDashboard />} />
             </Route>
             
+            {/* ── DeWhitt Fit app ── */}
+            <Route path="/fit" element={<FitAuthLayout />}>
+              <Route index element={<FitLandingPage />} />
+              <Route path="login" element={<FitLogin />} />
+              <Route path="register" element={<FitRegistrationForm />} />
+              <Route path="verify-email" element={<FitVerifyEmail />} />
+              <Route element={<FitProtectedRoute />}>
+                <Route path="dashboard" element={<FitDashboard />} />
+                <Route path="setup-profile" element={<FitProfileSetup />} />
+              </Route>
+            </Route>
+
             <Route path="*" element={<h1 style={{textAlign: 'center', marginTop: '100px'}}>404 Not Found</h1>} />
           </Routes>
       </AuthProvider>

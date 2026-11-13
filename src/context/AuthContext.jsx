@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
   const registerUser = async (registrationData) => {
     try {
       // 👇 CHANGED: Points to /api/auth/register
-      const response = await axios.post(`${API_URL}/api/auth/register`, registrationData); 
+      const response = await axios.post(`${API_URL}/api/auth/register`, { ...registrationData, app: 'design' }); 
       
       // NOTE: We do NOT automatically log them in anymore because they need to verify email first.
       // We just return success so the form can show the "Check your email" message.

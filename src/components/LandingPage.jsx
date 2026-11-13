@@ -61,7 +61,21 @@ const LandingPage = () => {
         </div>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: '20px' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <Link to="/fit">
+            <button style={{
+              background: 'transparent',
+              border: '1px solid #FFD700',
+              color: '#FFD700',
+              padding: '10px 20px',
+              borderRadius: '30px',
+              cursor: 'pointer',
+              fontWeight: '600',
+            }}>
+              DeWhitt Fit App
+            </button>
+          </Link>
+
           <Link to="/login">
             <button style={{
               background: 'transparent',
