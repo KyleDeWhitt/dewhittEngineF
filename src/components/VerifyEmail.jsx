@@ -24,10 +24,13 @@ function VerifyEmail() {
                 // 👇 Call the new backend route we just made
                 const response = await axios.post(`${API_URL}/api/auth/verify-email`, { token });
                 setStatus('success');
-                
+
+                // DeWhitt Fit accounts that land on this (design) page go to the Fit login.
+                const loginPath = response.data?.app === 'fit' ? '/fit/login' : '/login';
+
                 // Redirect to login after 3 seconds
                 setTimeout(() => {
-                    navigate('/login');
+                    navigate(loginPath);
                 }, 3000);
 
             } catch (error) {
