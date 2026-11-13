@@ -37,7 +37,7 @@ function VerifyEmail() {
 
                     {status === 'verifying' && (
                         <>
-                            <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>Checking<span style={{ color: T.pencil }}>\u2026</span></MarkerTitle>
+                            <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>Checking<span style={{ color: T.pencil }}>…</span></MarkerTitle>
                             <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>confirming your email, one sec.</p>
                         </>
                     )}
@@ -46,13 +46,13 @@ function VerifyEmail() {
                         <>
                             <MarkerTitle style={{ fontSize: '2rem', marginTop: 14 }}>All <span style={{ background: T.highGreen, padding: '0 4px' }}>Set</span>!</MarkerTitle>
                             <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>your email is verified.</p>
-                            <p style={{ fontSize: '0.9rem', color: T.pencil, marginTop: 8 }}>sending you to sign in\u2026</p>
+                            <p style={{ fontSize: '0.9rem', color: T.pencil, marginTop: 8 }}>sending you to sign in…</p>
                         </>
                     )}
 
                     {status === 'error' && (
                         <>
-                            <MarkerTitle style={{ fontSize: '1.9rem', marginTop: 14 }}>Hmm, that <span style={{ background: T.highPink, padding: '0 4px' }}>link\u2026</span></MarkerTitle>
+                            <MarkerTitle style={{ fontSize: '1.9rem', marginTop: 14 }}>Hmm, that <span style={{ background: T.highPink, padding: '0 4px' }}>link…</span></MarkerTitle>
                             <p style={{ fontSize: '1.05rem', color: T.inkSoft, marginTop: 10 }}>looks expired or invalid.</p>
                             <button onClick={() => navigate('/fit/login')}
                                 style={{ marginTop: 22, fontFamily: MARKER, fontSize: '1rem', background: T.highGreen, border: '1px solid #9ccd7a', borderRadius: 8, padding: '11px 22px', cursor: 'pointer', color: T.ink }}>
