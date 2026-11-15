@@ -1,7 +1,21 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Center, useGLTF, Environment } from '@react-three/drei';
+
+// Only animate a 3D icon while it is actually on screen.
+function useOnScreen() {
+  const ref = useRef(null);
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !('IntersectionObserver' in window)) return undefined;
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, onScreen];
+}
 
 // ==========================================
 // 1. THE DEWITT BRAND ICON (NEW: GLB MODEL)
@@ -60,12 +74,13 @@ function DeWittModel() {
 // Preload the GLB file for smoother loading
 useGLTF.preload('/DD.glb');
 
-function DeWittGLBIcon() {
+export function DeWittGLBIcon() {
+  const [ref, onScreen] = useOnScreen();
   return (
-    <div style={{ width: '90px', height: '90px', display: 'inline-block' }}> 
+    <div ref={ref} style={{ width: '90px', height: '90px', display: 'inline-block' }}> 
       {/* FIX: Removed double comma and moved camera back to z=6 so it can see the object */}
-      <Canvas camera={{ position: [0, 0, 6] }} gl={{ alpha: true }}>
-        <Environment preset="studio" />
+      <Canvas frameloop={onScreen ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ position: [0, 0, 6] }} gl={{ alpha: true }}>
+        <Environment files="/hdri/studio.hdr" />
         <DeWittModel />
       </Canvas>
     </div>
@@ -101,10 +116,11 @@ function LightningBolt() {
   );
 }
 
-function AnimatedBoltIcon() {
+export function AnimatedBoltIcon() {
+  const [ref, onScreen] = useOnScreen();
   return (
-    <div style={{ width: '60px', height: '60px', display: 'inline-block' }}>
-      <Canvas camera={{ position: [0, 0, 5] }} gl={{ alpha: true }}>
+    <div ref={ref} style={{ width: '60px', height: '60px', display: 'inline-block' }}>
+      <Canvas frameloop={onScreen ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ position: [0, 0, 5] }} gl={{ alpha: true }}>
         <ambientLight intensity={1} />
         <spotLight position={[10, 10, 10]} intensity={5} />
         <LightningBolt />
@@ -131,10 +147,11 @@ function RotatingCube() {
   );
 }
 
-function GoldCubeIcon() {
+export function GoldCubeIcon() {
+  const [ref, onScreen] = useOnScreen();
   return (
-    <div style={{ width: '60px', height: '60px', display: 'inline-block' }}>
-      <Canvas camera={{ position: [0, 0, 3] }} gl={{ alpha: true }}>
+    <div ref={ref} style={{ width: '60px', height: '60px', display: 'inline-block' }}>
+      <Canvas frameloop={onScreen ? 'always' : 'never'} dpr={[1, 1.5]} camera={{ position: [0, 0, 3] }} gl={{ alpha: true }}>
         <ambientLight intensity={2} />
         <RotatingCube />
       </Canvas>

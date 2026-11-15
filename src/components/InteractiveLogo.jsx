@@ -88,7 +88,7 @@ const InteractiveLogo = () => {
           
           {/* --- EXACT LIGHTING FROM MAIN SCENE --- */}
           {/* 1. Environment: City reflections */}
-          <Environment preset="city" />
+          <Environment files="/hdri/city.hdr" />
           
           {/* 2. Ambient: Low intensity (0.5) to keep shadows dramatic */}
           <ambientLight intensity={0.5} />

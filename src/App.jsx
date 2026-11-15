@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import LandingPage from './components/LandingPage';
+import HomePage from './components/home/HomePage';
+import LandingPage from './components/LandingPage'; // previous homepage, kept at /classic for comparison
 import Login from './components/Login';
 import RegistrationForm from './components/RegistrationForm';
 import Dashboard from './components/Dashboard';
@@ -72,7 +73,8 @@ function App() {
           <GlobalStyles /> {/* ✅ ENABLED AGAIN */}
           
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/classic" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/verify-email" element={<VerifyEmail />} />

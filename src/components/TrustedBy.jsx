@@ -121,7 +121,7 @@ export default function TrustedBy() {
       <div style={{ width: '100%', height: '100%' }}>
         <Canvas camera={{ position: [0, 0, 8], fov: 40 }} gl={{ alpha: true }}>
           {/* THE MAGIC LIGHTING */}
-          <Environment preset="city" />
+          <Environment files="/hdri/city.hdr" />
           
           <ambientLight intensity={0.5} />
           <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={5} />
