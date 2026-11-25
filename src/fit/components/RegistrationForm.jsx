@@ -99,6 +99,9 @@ function RegistrationForm() {
                         <button type="submit" disabled={loading} style={{ width: '100%', marginTop: 26, fontFamily: MARKER, fontSize: '1.1rem', background: T.highGreen, border: '1px solid #9ccd7a', borderRadius: 8, padding: '13px', cursor: 'pointer', color: T.ink, boxShadow: '0 2px 6px rgba(0,0,0,0.1)', opacity: loading ? 0.7 : 1 }}>
                             {loading ? 'creating\u2026' : 'create account'}
                         </button>
+                        <div style={{ marginTop: 10, fontFamily: FONT, fontSize: '0.8rem', color: T.pencil, textAlign: 'center' }}>
+                            by signing up you agree to the <Link to="/fit/terms" style={{ color: T.blue }}>terms</Link> and <Link to="/fit/privacy" style={{ color: T.blue }}>privacy policy</Link>.
+                        </div>
                     </form>
 
                     <div style={{ marginTop: 22, textAlign: 'center', fontFamily: FONT, color: T.inkSoft }}>

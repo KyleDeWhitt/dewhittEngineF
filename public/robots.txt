@@ -1,0 +1,12 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /classic
+Disallow: /setup-profile
+Disallow: /verify-email
+Disallow: /fit/dashboard
+Disallow: /fit/coach
+Disallow: /fit/setup-profile
+Disallow: /fit/verify-email
+
+Sitemap: https://dewhittdesigns.com/sitemap.xml

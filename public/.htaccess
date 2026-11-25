@@ -2,6 +2,14 @@
   RewriteEngine On
   RewriteBase /
   RewriteRule ^index\.html$ - [L]
+  # DeWhitt Fit's landing page has its own page shell (title, description,
+  # share preview) that the build writes to fit.html.
+  # Someone typing /fit.html goes to /fit (THE_REQUEST is the original request line, so the
+  # internal /fit -> /fit.html rewrite below doesn't loop).
+  RewriteCond %{THE_REQUEST} \s/fit\.html[\s?]
+  RewriteRule ^fit\.html$ /fit [R=301,L]
+  RewriteRule ^fit\.html$ - [L]
+  RewriteRule ^fit/?$ /fit.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
@@ -12,7 +20,7 @@
 # The page shell must be re-checked on every visit so new deploys show up
 # immediately; built assets have unique hashed names and can be cached forever.
 <IfModule mod_headers.c>
-  <FilesMatch "^(index\.html)?$">
+  <FilesMatch "^((index|fit)\.html)?$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   <FilesMatch "\.(js|css|woff2?)$">

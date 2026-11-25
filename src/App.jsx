@@ -21,6 +21,7 @@ import FitProtectedRoute from './fit/components/ProtectedRoute';
 import FitProfileSetup from './fit/components/ProfileSetup';
 import FitVerifyEmail from './fit/components/VerifyEmail';
 import FitCoachReview from './fit/movement/CoachReview';
+import { FitPrivacy, FitTerms } from './fit/components/Legal';
 
 const GlobalStyles = () => (
   <style>{`
@@ -61,6 +62,15 @@ const GlobalStyles = () => (
 );
 
 // Layout that scopes the DeWhitt Fit app with its own auth context.
+// Unknown URLs still get the app (and a 200 status from the host), so tell search
+// engines not to index them. React 19 moves this <meta> into <head>.
+const NotFound = () => (
+  <>
+    <meta name="robots" content="noindex" />
+    <h1 style={{textAlign: 'center', marginTop: '100px'}}>404 Not Found</h1>
+  </>
+);
+
 const FitAuthLayout = () => (
   <FitAuthProvider>
     <Outlet />
@@ -92,6 +102,8 @@ function App() {
               <Route path="login" element={<FitLogin />} />
               <Route path="register" element={<FitRegistrationForm />} />
               <Route path="verify-email" element={<FitVerifyEmail />} />
+              <Route path="privacy" element={<FitPrivacy />} />
+              <Route path="terms" element={<FitTerms />} />
               <Route element={<FitProtectedRoute />}>
                 <Route path="dashboard" element={<FitDashboard />} />
                 <Route path="setup-profile" element={<FitProfileSetup />} />
@@ -99,7 +111,7 @@ function App() {
               </Route>
             </Route>
 
-            <Route path="*" element={<h1 style={{textAlign: 'center', marginTop: '100px'}}>404 Not Found</h1>} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
       </AuthProvider>
     </Router>

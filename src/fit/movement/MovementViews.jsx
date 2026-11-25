@@ -16,11 +16,11 @@ const SPEEDS = [0.25, 0.5, 1];
 
 /**
  * Animated stick-figure replay. Time is owned by the parent so the chart can follow it.
- * props: poseData, series (from computeSeries), primary, view, time, onTime(t), height
+ * props: poseData, series (from computeSeries), primary, view, time, onTime(t), height, autoPlay
  */
-export function SkeletonPlayer({ poseData, series, primary, view = 'side', time, onTime, height = 360 }) {
+export function SkeletonPlayer({ poseData, series, primary, view = 'side', time, onTime, height = 360, autoPlay = false }) {
     const canvasRef = useRef(null);
-    const [playing, setPlaying] = useState(false);
+    const [playing, setPlaying] = useState(autoPlay);
     const [speed, setSpeed] = useState(0.5);
     const duration = poseData?.frames?.length ? poseData.frames[poseData.frames.length - 1][0] / 1000 : 0;
     const timeRef = useRef(time);
