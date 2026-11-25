@@ -773,7 +773,7 @@ function Dashboard() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {user?.role === 'admin' && (
-                                <Link to="/fit/coach" style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.highPink, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '6px 10px', color: T.ink, textDecoration: 'none', whiteSpace: 'nowrap' }}>form check inbox</Link>
+                                <Link to="/fit/coach" style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.highPink, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '6px 10px', color: T.ink, textDecoration: 'none', whiteSpace: 'nowrap' }}>coach dashboard</Link>
                             )}
                             <button onClick={logout} style={{ fontFamily: FONT, background: 'none', border: 'none', color: T.pencil, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline', padding: '4px 6px' }}>sign out</button>
                         </div>

@@ -57,7 +57,7 @@ export function FitPrivacy() {
             <H>How we use it</H>
             <UL>
                 <li>To run the app: save your journal, calculate calories, streaks and personal records, and show your history.</li>
-                <li>To let your coach review the form checks you send and reply with notes.</li>
+                <li>To let your coach follow your progress, review the form checks you send, and give you feedback.</li>
                 <li>To send account emails, such as verifying your email address.</li>
                 <li>To keep the service secure and fix problems.</li>
             </UL>
@@ -66,7 +66,7 @@ export function FitPrivacy() {
             <H>Who can see it</H>
             <UL>
                 <li><strong>You.</strong></li>
-                <li><strong>Your coach</strong> sees your name and the form checks you send, including the stills and your note.</li>
+                <li><strong>Your coach</strong> sees your name, email, profile and journal (workouts, food, water, sleep, notes and weigh-ins), your personal records, and the form checks you send, including the stills and your note.</li>
                 <li><strong>Our administrators</strong> may access account data when needed to run the service or help you with a problem.</li>
                 <li><strong>Service providers</strong> that run parts of the app for us, only for that purpose:
                     <UL>

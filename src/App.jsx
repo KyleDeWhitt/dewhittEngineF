@@ -20,7 +20,7 @@ import FitDashboard from './fit/components/Dashboard';
 import FitProtectedRoute from './fit/components/ProtectedRoute';
 import FitProfileSetup from './fit/components/ProfileSetup';
 import FitVerifyEmail from './fit/components/VerifyEmail';
-import FitCoachReview from './fit/movement/CoachReview';
+import FitCoachDashboard from './fit/coach/CoachDashboard';
 import { FitPrivacy, FitTerms } from './fit/components/Legal';
 
 const GlobalStyles = () => (
@@ -107,7 +107,7 @@ function App() {
               <Route element={<FitProtectedRoute />}>
                 <Route path="dashboard" element={<FitDashboard />} />
                 <Route path="setup-profile" element={<FitProfileSetup />} />
-                <Route path="coach" element={<FitCoachReview />} />
+                <Route path="coach" element={<FitCoachDashboard />} />
               </Route>
             </Route>
 

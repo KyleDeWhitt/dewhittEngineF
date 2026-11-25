@@ -1,11 +1,9 @@
-// Coach screen: inbox of clients' form-check clips with skeleton replay, angle charts and notes.
-// Coach = a user with role 'admin' (the backend enforces this too).
+// Coach form-check views: the inbox of clients' clips and the full review of one clip.
+// Used inside the coach dashboard (../coach/CoachDashboard.jsx), which checks the coach role.
 // Shared by the web app (src/fit/) and the Android app (dewhittFitEngine/app/src/):
-// keep both copies identical. Links are relative so they work under /fit (web) and / (app).
+// keep both copies identical.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
-import { useAuth } from '../context/AuthContext';
 import { T, FONT, MARKER, Paper, MarkerTitle, Tape } from '../theme';
 import { analyzeClip, computeSeries, JOINTS, JOINT_LABEL } from './analysis';
 import { SkeletonPlayer, StillWithSkeleton, AngleChart } from './MovementViews';
@@ -15,7 +13,7 @@ import { Observations } from './FormCheck';
 const fmtDate = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const name = (c) => (c?.client ? `${c.client.firstName} ${c.client.lastName}` : 'Client');
 
-function ClipDetail({ clipId, onChanged }) {
+export function ClipDetail({ clipId, onChanged, onOpenClient }) {
     const [clip, setClip] = useState(null);
     const [error, setError] = useState('');
     const [time, setTime] = useState(0);
@@ -95,6 +93,7 @@ function ClipDetail({ clipId, onChanged }) {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
                 <MarkerTitle style={{ fontSize: '1.3rem' }}>{name(clip)} · {clip.exercise}</MarkerTitle>
+                {onOpenClient && <button type="button" onClick={() => onOpenClient(clip.userId)} style={{ fontFamily: FONT, fontSize: '0.85rem', background: 'none', border: 'none', color: T.blue, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>view client &rarr;</button>}
                 <span style={{ fontFamily: FONT, color: T.pencil, fontSize: '0.9rem' }}>{fmtDate(clip.date)} · {clip.view} view · {Number(clip.durationSec || 0).toFixed(1)}s</span>
             </div>
             {clip.clientNote && (
@@ -214,8 +213,7 @@ function ClipDetail({ clipId, onChanged }) {
     );
 }
 
-export default function CoachReview() {
-    const { user } = useAuth();
+export default function FormCheckInbox({ onOpenClient, onChanged }) {
     const [filter, setFilter] = useState('new');
     const [clips, setClips] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -228,24 +226,16 @@ export default function CoachReview() {
             return { clips: r.data.clips || [], error: '' };
         } catch (e) {
             console.error(e);
-            return { clips: [], error: e?.response?.status === 403 ? 'This page is for coaches only.' : 'Could not load clips.' };
+            return { clips: [], error: 'Could not load clips.' };
         }
     }, [filter]);
     const apply = (res) => { setClips(res.clips); setError(res.error); setLoading(false); };
-    const load = useCallback(async () => apply(await fetchClips()), [fetchClips]);
+    const load = useCallback(async () => { apply(await fetchClips()); onChanged && onChanged(); }, [fetchClips, onChanged]);
     useEffect(() => {
         let cancelled = false;
         fetchClips().then(res => { if (!cancelled) apply(res); });
         return () => { cancelled = true; };
     }, [fetchClips]);
-
-    if (user && user.role !== 'admin') {
-        return (
-            <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#28221b', color: '#efe6d2', fontFamily: FONT, fontSize: '1.1rem', textAlign: 'center', padding: 20 }}>
-                <div>This page is for coaches only. <Link to="../dashboard" style={{ color: T.highYellow }}>Back to your journal</Link></div>
-            </div>
-        );
-    }
 
     const tab = (v, label) => (
         <button key={v} type="button" onClick={() => { setFilter(v); setLoading(true); }}
@@ -253,47 +243,36 @@ export default function CoachReview() {
     );
 
     return (
-        <div style={{ minHeight: '100vh', width: '100%', background: 'radial-gradient(1200px 700px at 50% -10%, #332a20, #211b15)', color: T.ink, fontFamily: FONT, padding: '24px 16px 60px', boxSizing: 'border-box' }}>
-            <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-                <Paper lined={false} style={{ padding: '18px 24px', marginBottom: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                        <div>
-                            <MarkerTitle style={{ fontSize: 'clamp(1.5rem, 4vw, 2.1rem)' }}>Form Check Inbox</MarkerTitle>
-                            <div style={{ color: T.pencil, fontSize: '0.9rem', marginTop: 4 }}>Clients' filmed sets: movement data and face-blurred stills. For coaching review, not medical diagnosis.</div>
-                        </div>
-                        <Link to="../dashboard" style={{ fontFamily: FONT, color: T.blue, fontSize: '0.95rem' }}>&larr; my journal</Link>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                        {tab('new', 'new')}{tab('reviewed', 'reviewed')}{tab('all', 'all')}
-                    </div>
+        <div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                {tab('new', 'new')}{tab('reviewed', 'reviewed')}{tab('all', 'all')}
+                <span style={{ flex: 1 }} />
+                <span style={{ fontFamily: FONT, fontSize: '0.8rem', color: '#bab09c' }}>Movement data and face-blurred stills. For coaching review, not medical diagnosis.</span>
+            </div>
+            {error && <div style={{ color: '#f0a49c', marginBottom: 12 }}>{error}</div>}
+            <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <Paper lined={false} style={{ padding: 12, flex: '1 1 240px', maxWidth: 320, maxHeight: '80vh', overflowY: 'auto' }}>
+                    {loading ? <div style={{ color: T.pencil, padding: 8 }}>Loading…</div>
+                        : clips.length === 0 ? <div style={{ color: T.pencil, padding: 8 }}>{filter === 'new' ? 'No new clips. Nice — inbox zero.' : 'No clips yet.'}</div>
+                        : clips.map(c => (
+                            <button key={c.id} type="button" onClick={() => setSelected(c.id)}
+                                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 10px', marginBottom: 6, borderRadius: 6, cursor: 'pointer', border: selected === c.id ? `2px solid ${T.margin}` : `1px solid ${T.ruled}`, background: selected === c.id ? T.highPink : '#fffdf8', fontFamily: FONT, color: T.inkSoft }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                                    <strong style={{ color: T.ink }}>{name(c)}</strong>
+                                    {c.status === 'new' && <span style={{ fontFamily: MARKER, fontSize: '0.65rem', background: T.highYellow, borderRadius: 4, padding: '1px 6px', color: T.ink }}>NEW</span>}
+                                </div>
+                                <div style={{ fontSize: '0.88rem' }}>{c.exercise} · {c.metrics ? `${c.metrics.repCount} reps` : ''}</div>
+                                <div style={{ fontSize: '0.78rem', color: T.pencil }}>
+                                    {fmtDate(c.date)} · {c.view}
+                                    {c.metrics?.observations?.some(o => o.level === 'flag') ? ' · ! flagged' : ''}
+                                </div>
+                            </button>
+                        ))}
                 </Paper>
-
-                {error && <div style={{ color: '#f0a49c', marginBottom: 12 }}>{error}</div>}
-
-                <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    <Paper lined={false} style={{ padding: 12, flex: '1 1 240px', maxWidth: 320, maxHeight: '80vh', overflowY: 'auto' }}>
-                        {loading ? <div style={{ color: T.pencil, padding: 8 }}>Loading…</div>
-                            : clips.length === 0 ? <div style={{ color: T.pencil, padding: 8 }}>{filter === 'new' ? 'No new clips. Nice — inbox zero.' : 'No clips yet.'}</div>
-                            : clips.map(c => (
-                                <button key={c.id} type="button" onClick={() => setSelected(c.id)}
-                                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 10px', marginBottom: 6, borderRadius: 6, cursor: 'pointer', border: selected === c.id ? `2px solid ${T.margin}` : `1px solid ${T.ruled}`, background: selected === c.id ? T.highPink : '#fffdf8', fontFamily: FONT, color: T.inkSoft }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-                                        <strong style={{ color: T.ink }}>{name(c)}</strong>
-                                        {c.status === 'new' && <span style={{ fontFamily: MARKER, fontSize: '0.65rem', background: T.highYellow, borderRadius: 4, padding: '1px 6px', color: T.ink }}>NEW</span>}
-                                    </div>
-                                    <div style={{ fontSize: '0.88rem' }}>{c.exercise} · {c.metrics ? `${c.metrics.repCount} reps` : ''}</div>
-                                    <div style={{ fontSize: '0.78rem', color: T.pencil }}>
-                                        {fmtDate(c.date)} · {c.view}
-                                        {c.metrics?.observations?.some(o => o.level === 'flag') ? ' · ! flagged' : ''}
-                                    </div>
-                                </button>
-                            ))}
-                    </Paper>
-                    <Paper margin style={{ padding: '22px 24px 26px 58px', flex: '3 1 480px', minWidth: 0 }}>
-                        {selected ? <ClipDetail clipId={selected} onChanged={load} />
-                            : <div style={{ color: T.pencil }}><Tape rotate={-2}>PICK A CLIP</Tape><div style={{ marginTop: 12 }}>Choose a clip on the left to replay it and see the angles.</div></div>}
-                    </Paper>
-                </div>
+                <Paper margin style={{ padding: '22px 24px 26px 58px', flex: '3 1 480px', minWidth: 0 }}>
+                    {selected ? <ClipDetail clipId={selected} onChanged={load} onOpenClient={onOpenClient} />
+                        : <div style={{ color: T.pencil }}><Tape rotate={-2}>PICK A CLIP</Tape><div style={{ marginTop: 12 }}>Choose a clip on the left to replay it and see the angles.</div></div>}
+                </Paper>
             </div>
         </div>
     );
