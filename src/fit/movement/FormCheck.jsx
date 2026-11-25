@@ -1,7 +1,9 @@
 // Client side of form check: film a set, analyze it on the phone, send the movement data to the coach.
+// FormCheckRecorder opens from a logged lift on the dashboard; FormCheckHistory lists sent clips
+// and the coach's notes. The dashboard owns the clip list.
 // Shared by the web app (src/fit/) and the Android app (dewhittFitEngine/app/src/):
 // keep both copies identical.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { T, FONT, MARKER } from '../theme';
 import { openVideo, closeVideo, trackVideo, captureStill, MAX_SECONDS } from './pose';
@@ -11,11 +13,6 @@ import { SkeletonPlayer } from './MovementViews';
 const CONSENT_KEY = 'fitFormCheckConsent';
 const readConsent = () => { try { return localStorage.getItem(CONSENT_KEY) === 'yes'; } catch { return false; } };
 const saveConsent = () => { try { localStorage.setItem(CONSENT_KEY, 'yes'); } catch { /* private mode */ } };
-
-const pad = (n) => String(n).padStart(2, '0');
-const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-
-const fetchMyClips = async () => (await axiosInstance.get('/api/movement/clips')).data.clips || [];
 
 const OBS_COLOR = { flag: T.margin, warn: T.calorie, info: T.inkSoft };
 
@@ -48,9 +45,13 @@ function pickStills(poseData, metrics) {
     return out;
 }
 
-export default function FormCheck({ exerciseGroups }) {
+/**
+ * Film/pick a video, analyze it on the device, send it to the coach.
+ * props: exerciseGroups, initialExercise, date (YYYY-MM-DD the clip belongs to), onSent(), onClose()
+ */
+export function FormCheckRecorder({ exerciseGroups, initialExercise, date, onSent, onClose }) {
     const allNames = useMemo(() => exerciseGroups.flatMap(g => g.items.map(e => e.name)), [exerciseGroups]);
-    const [exercise, setExercise] = useState(allNames.includes('Barbell Squat') ? 'Barbell Squat' : allNames[0]);
+    const [exercise, setExercise] = useState(allNames.includes(initialExercise) ? initialExercise : (allNames.includes('Barbell Squat') ? 'Barbell Squat' : allNames[0]));
     const [view, setView] = useState('side');
     const [note, setNote] = useState('');
     const [consent, setConsent] = useState(readConsent);
@@ -60,28 +61,20 @@ export default function FormCheck({ exerciseGroups }) {
     const [result, setResult] = useState(null); // { poseData, metrics, stills, durationSec }
     const [time, setTime] = useState(0);
     const [sending, setSending] = useState(false);
-    const [clips, setClips] = useState([]);
-    const [open, setOpen] = useState(false);
+    const [sent, setSent] = useState(false);
+    const [tipsOpen, setTipsOpen] = useState(false);
     const abortRef = useRef(null);
     const fileRef = useRef(null);
     const recordRef = useRef(null);
 
-    const loadClips = useCallback(async () => {
-        try { setClips(await fetchMyClips()); } catch (e) { console.error(e); }
-    }, []);
-    useEffect(() => {
-        let cancelled = false;
-        fetchMyClips().then(c => { if (!cancelled) setClips(c); }).catch(e => console.error(e));
-        return () => { cancelled = true; };
-    }, []);
-
     const series = useMemo(() => (result ? computeSeries(result.poseData, view) : null), [result, view]);
-
+    // Re-run the numbers if the client changes exercise or view after analyzing
+    const metrics = useMemo(() => (result ? analyzeClip(result.poseData, exercise, view) : null), [result, exercise, view]);
     const busy = !!stage;
 
     const handleFile = async (file) => {
         if (!file) return;
-        setError(''); setResult(null); setProgress(0); setTime(0);
+        setError(''); setResult(null); setProgress(0); setTime(0); setSent(false);
         const ctrl = new AbortController();
         abortRef.current = ctrl;
         let video = null;
@@ -91,13 +84,13 @@ export default function FormCheck({ exerciseGroups }) {
             const poseData = await trackVideo(video, { onProgress: setProgress, onStage: setStage, signal: ctrl.signal });
             if (!poseData.frames.some(r => r.length > 1)) throw new Error('No body was found in this video. Make sure your whole body is in frame and well lit.');
             setStage('Measuring angles and reps…');
-            const metrics = analyzeClip(poseData, exercise, view);
+            const m = analyzeClip(poseData, exercise, view);
             const stills = [];
-            for (const s of pickStills(poseData, metrics)) {
+            for (const s of pickStills(poseData, m)) {
                 stills.push({ ...s, src: await captureStill(video, s.t, frameAt(poseData, s.t)) });
             }
             const durationSec = Math.round(Math.min(video.duration, MAX_SECONDS) * 10) / 10;
-            setResult({ poseData, metrics, stills, durationSec });
+            setResult({ poseData, metrics: m, stills, durationSec });
         } catch (e) {
             if (e?.name !== 'AbortError') { console.error(e); setError(e?.message || 'Could not analyze this video.'); }
         } finally {
@@ -109,42 +102,44 @@ export default function FormCheck({ exerciseGroups }) {
         }
     };
 
-    // Re-run the numbers if the client changes exercise or view after analyzing
-    const metrics = useMemo(() => (result ? analyzeClip(result.poseData, exercise, view) : null), [result, exercise, view]);
-
     const send = async () => {
         if (!result || !consent) return;
         setSending(true); setError('');
         try {
             saveConsent();
             await axiosInstance.post('/api/movement/clips', {
-                exercise, view, date: localDate(), durationSec: result.durationSec,
+                exercise, view, date, durationSec: result.durationSec,
                 poseData: result.poseData, metrics, stills: result.stills, clientNote: note || null,
             }, { timeout: 60000 });
-            setResult(null); setNote('');
-            await loadClips();
+            setResult(null); setNote(''); setSent(true);
+            onSent && onSent();
         } catch (e) {
             console.error(e);
             setError(e?.response?.data?.message || 'Upload failed. Check your connection and try again.');
         } finally { setSending(false); }
     };
 
-    const remove = async (id) => {
-        if (!window.confirm('Delete this clip? Your coach will no longer see it.')) return;
-        try { await axiosInstance.delete(`/api/movement/clips/${id}`); await loadClips(); }
-        catch (e) { console.error(e); }
-    };
-
     const inp = { width: '100%', padding: '6px 4px', background: '#fffdf6', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1rem', color: T.ink, boxSizing: 'border-box', outline: 'none' };
     const lbl = { fontFamily: FONT, fontSize: '0.78rem', color: T.pencil, marginBottom: 2 };
     const btn = { fontFamily: MARKER, fontSize: '0.8rem', background: T.sticky, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '10px 14px', cursor: 'pointer', color: T.ink, whiteSpace: 'nowrap' };
     const pill = (on) => ({ fontFamily: FONT, fontSize: '0.85rem', padding: '5px 12px', borderRadius: 50, cursor: 'pointer', border: `1px solid ${T.ruled}`, background: on ? T.highYellow : '#fffdf6', color: T.ink });
+    const linkBtn = { fontFamily: FONT, fontSize: '0.85rem', background: 'none', border: 'none', color: T.pencil, textDecoration: 'underline', cursor: 'pointer', padding: 0 };
 
     return (
-        <div style={{ marginTop: 8 }}>
-            <div style={{ fontFamily: FONT, fontSize: '0.9rem', color: T.inkSoft }}>
-                Film a set and send it to your coach. Your phone tracks your movement and only the stick-figure data and two small stills (face blurred) are sent. The video itself stays on your phone.
+        <div style={{ margin: '10px 0 6px', padding: 14, background: 'rgba(255,255,255,0.45)', border: `1px dashed ${T.ruled}`, borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+                <span style={{ fontFamily: MARKER, fontSize: '0.95rem', color: T.ink }}>📹 Form check</span>
+                {onClose && !busy && <button type="button" onClick={onClose} style={linkBtn}>close</button>}
             </div>
+            <div style={{ fontFamily: FONT, fontSize: '0.88rem', color: T.inkSoft, marginTop: 4 }}>
+                Film a set and send it to your coach. Your phone tracks your movement; only the stick-figure data and two small stills (face blurred) are sent. The video stays on your phone.
+            </div>
+
+            {sent && !result && (
+                <div style={{ marginTop: 10, padding: '6px 10px', background: T.highGreen, borderRadius: 4, fontFamily: FONT, color: T.ink }}>
+                    ✓ Sent! Your coach&rsquo;s notes will show up under &ldquo;Form checks&rdquo; further down.
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
                 <div style={{ flex: '1 1 200px', minWidth: 160 }}>
@@ -174,10 +169,10 @@ export default function FormCheck({ exerciseGroups }) {
                 </label>
             </div>
 
-            <button type="button" onClick={() => setOpen(o => !o)} style={{ fontFamily: FONT, fontSize: '0.8rem', background: 'none', border: 'none', color: T.blue, textDecoration: 'underline', cursor: 'pointer', padding: '6px 0 0' }}>
-                {open ? 'hide filming tips' : 'filming tips'}
+            <button type="button" onClick={() => setTipsOpen(o => !o)} style={{ ...linkBtn, fontSize: '0.8rem', color: T.blue, paddingTop: 6 }}>
+                {tipsOpen ? 'hide filming tips' : 'filming tips'}
             </button>
-            {open && (
+            {tipsOpen && (
                 <ul style={{ fontFamily: FONT, fontSize: '0.85rem', color: T.inkSoft, margin: '4px 0 0', paddingLeft: 18 }}>
                     <li>Prop the phone at about hip height, 6–10 feet away. Your whole body, head to feet, should stay in frame.</li>
                     <li>Side view is best for squats, deadlifts, presses and rows. Front view is best for left/right balance.</li>
@@ -191,14 +186,14 @@ export default function FormCheck({ exerciseGroups }) {
                     <div style={{ height: 10, background: '#fffdf6', border: `1px solid ${T.ruled}`, borderRadius: 6, marginTop: 6, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', background: T.highGreen, transition: 'width .2s' }} />
                     </div>
-                    <button type="button" onClick={() => abortRef.current?.abort()} style={{ fontFamily: FONT, fontSize: '0.8rem', background: 'none', border: 'none', color: T.pencil, textDecoration: 'underline', cursor: 'pointer', padding: '6px 0' }}>cancel</button>
+                    <button type="button" onClick={() => abortRef.current?.abort()} style={{ ...linkBtn, fontSize: '0.8rem', padding: '6px 0' }}>cancel</button>
                 </div>
             )}
 
             {error && <div style={{ fontFamily: FONT, color: T.margin, marginTop: 10 }}>{error}</div>}
 
             {result && metrics && (
-                <div style={{ marginTop: 14, padding: 14, background: 'rgba(255,255,255,0.35)', border: `1px dashed ${T.ruled}`, borderRadius: 8 }}>
+                <div style={{ marginTop: 14 }}>
                     <div style={{ fontFamily: MARKER, fontSize: '0.95rem', color: T.ink }}>
                         {metrics.repCount} rep{metrics.repCount === 1 ? '' : 's'} · tracking {JOINT_LABEL[metrics.primary].toLowerCase()} angle
                     </div>
@@ -218,35 +213,48 @@ export default function FormCheck({ exerciseGroups }) {
                         <button type="button" style={{ ...btn, background: T.highGreen, opacity: consent ? 1 : 0.5 }} disabled={!consent || sending} onClick={send}>
                             {sending ? 'sending…' : '✓ send to coach'}
                         </button>
-                        <button type="button" onClick={() => setResult(null)} style={{ fontFamily: FONT, fontSize: '0.9rem', background: 'none', border: 'none', color: T.pencil, textDecoration: 'underline', cursor: 'pointer' }}>discard</button>
+                        <button type="button" onClick={() => setResult(null)} style={{ ...linkBtn, fontSize: '0.9rem' }}>discard</button>
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
 
-            {clips.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                    <div style={{ fontFamily: MARKER, fontSize: '0.85rem', color: T.inkSoft }}>Sent clips</div>
-                    {clips.map(c => (
-                        <div key={c.id} style={{ padding: '7px 0', borderBottom: `1px dashed ${T.ruled}`, fontFamily: FONT, fontSize: '0.95rem', color: T.inkSoft }}>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <span style={{ flex: 1, minWidth: 160 }}>
-                                    <strong style={{ color: T.ink }}>{c.exercise}</strong> · {c.view} · {new Date(c.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                    {c.metrics ? ` · ${c.metrics.repCount} reps` : ''}
-                                </span>
-                                <span style={{ fontFamily: MARKER, fontSize: '0.7rem', borderRadius: 4, padding: '1px 7px', background: c.status === 'reviewed' ? T.highGreen : T.highYellow, color: T.ink }}>
-                                    {c.status === 'reviewed' ? 'reviewed' : 'waiting for coach'}
-                                </span>
-                                <button type="button" onClick={() => remove(c.id)} aria-label="Delete clip" style={{ fontFamily: FONT, fontSize: '0.9rem', background: 'none', border: 'none', color: T.margin, cursor: 'pointer', padding: 2 }}>&#10005;</button>
-                            </div>
-                            {c.coachNote && (
-                                <div style={{ marginTop: 5, padding: '6px 10px', background: T.sticky, borderRadius: 4, fontSize: '0.92rem', color: T.ink, whiteSpace: 'pre-wrap' }}>
-                                    <span style={{ fontFamily: MARKER, fontSize: '0.72rem', color: T.inkSoft }}>coach: </span>{c.coachNote}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+/**
+ * Sent clips with status and the coach's notes. Notes newer than `seenAt` (ms) are marked new.
+ * props: clips, seenAt, onDelete(id), onMarkSeen()
+ */
+export function FormCheckHistory({ clips, seenAt = 0, onDelete, onMarkSeen }) {
+    const isNew = (c) => c.status === 'reviewed' && c.coachNote && c.reviewedAt && new Date(c.reviewedAt).getTime() > seenAt;
+    const unseen = clips.filter(isNew).length;
+    return (
+        <div>
+            {unseen > 0 && onMarkSeen && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={onMarkSeen} style={{ fontFamily: FONT, fontSize: '0.8rem', background: 'none', border: 'none', color: T.blue, textDecoration: 'underline', cursor: 'pointer' }}>mark as read</button>
                 </div>
             )}
+            {clips.map(c => (
+                <div key={c.id} style={{ padding: '7px 0', borderBottom: `1px dashed ${T.ruled}`, fontFamily: FONT, fontSize: '0.95rem', color: T.inkSoft }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ flex: 1, minWidth: 160 }}>
+                            <strong style={{ color: T.ink }}>{c.exercise}</strong> · {c.view} · {new Date(c.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {c.metrics ? ` · ${c.metrics.repCount} reps` : ''}
+                        </span>
+                        {isNew(c) && <span style={{ fontFamily: MARKER, fontSize: '0.7rem', borderRadius: 4, padding: '1px 7px', background: T.highPink, color: '#7a1f1f' }}>NEW NOTE</span>}
+                        <span style={{ fontFamily: MARKER, fontSize: '0.7rem', borderRadius: 4, padding: '1px 7px', background: c.status === 'reviewed' ? T.highGreen : T.highYellow, color: T.ink }}>
+                            {c.status === 'reviewed' ? 'reviewed' : 'waiting for coach'}
+                        </span>
+                        <button type="button" onClick={() => onDelete(c.id)} aria-label="Delete clip" style={{ fontFamily: FONT, fontSize: '0.9rem', background: 'none', border: 'none', color: T.margin, cursor: 'pointer', padding: 2 }}>&#10005;</button>
+                    </div>
+                    {c.coachNote && (
+                        <div style={{ marginTop: 5, padding: '6px 10px', background: T.sticky, borderRadius: 4, fontSize: '0.92rem', color: T.ink, whiteSpace: 'pre-wrap' }}>
+                            <span style={{ fontFamily: MARKER, fontSize: '0.72rem', color: T.inkSoft }}>coach: </span>{c.coachNote}
+                        </div>
+                    )}
+                </div>
+            ))}
         </div>
     );
 }

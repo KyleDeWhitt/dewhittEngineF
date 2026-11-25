@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
-import FormCheck from '../movement/FormCheck';
+import { FormCheckRecorder, FormCheckHistory } from '../movement/FormCheck';
 import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
@@ -421,86 +421,262 @@ function RecordsSection({ unit }) {
     );
 }
 
+// ── Calendar helpers ───────────────────────────────────────────────────────
+const ymKey = (dateStr) => dateStr.slice(0, 7); // "YYYY-MM"
+const addDays = (dateStr, n) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+// Sunday-to-Saturday week containing dateStr
+const weekOf = (dateStr) => {
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    const start = addDays(dateStr, -dow);
+    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+};
+const fetchMonth = async (y, m) => (await axiosInstance.get(`${API_URL}/api/fitness/calendar`, { params: { year: y, month: m } })).data.days || [];
+const fetchStreak = async () => {
+    const r = await axiosInstance.get(`${API_URL}/api/fitness/streak`);
+    return { current: r.data.current || 0, best: r.data.best || 0 };
+};
+const fetchMyClips = async () => (await axiosInstance.get('/api/movement/clips')).data.clips || [];
+
+const readStored = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
+const writeStored = (key, value) => { try { localStorage.setItem(key, value); } catch { /* private mode */ } };
+
+function DayCell({ date, data, selected, today, compact, onClick }) {
+    return (
+        <button type="button" onClick={onClick} aria-pressed={selected} aria-label={new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            style={{
+                minHeight: compact ? 58 : 74, borderRadius: 6, padding: '5px 2px', cursor: 'pointer', textAlign: 'center',
+                background: selected ? T.highPink : (today ? T.highYellow : '#fffdf8'),
+                border: selected ? `2px solid ${T.margin}` : `1px solid ${T.ruled}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0,
+            }}>
+            <span style={{ fontFamily: FONT, fontSize: '1.1rem', fontWeight: 700, color: T.ink }}>{Number(date.slice(8, 10))}</span>
+            <span style={{ display: 'flex', gap: 3, marginTop: 5, height: 8 }}>
+                {data?.workoutCount > 0 && <i style={dmark('#d9544a')} />}
+                {data?.waterGlasses > 0 && <i style={dmark(T.blue)} />}
+                {data?.sleepHours > 0 && <i style={dmark(T.sleep)} />}
+                {data?.caloriesConsumed > 0 && <i style={dmark(T.calorie)} />}
+            </span>
+        </button>
+    );
+}
+
+/** Week strip by default; expands to the full month. Picking a day in month view folds it back. */
+function CalendarCard({ daysByDate, selectedDate, onSelect, monthView, setMonthView, viewYM, setViewYM }) {
+    const today = todayStr();
+    const week = weekOf(selectedDate);
+    const [vy, vm] = viewYM;
+    const grid = useMemo(() => buildGrid(vy, vm), [vy, vm]);
+    const label = monthView ? monthLabel(vy, vm) : monthLabel(Number(selectedDate.slice(0, 4)), Number(selectedDate.slice(5, 7)));
+
+    const step = (delta) => {
+        if (monthView) {
+            let m = vm + delta, y = vy;
+            if (m < 1) { m = 12; y -= 1; }
+            if (m > 12) { m = 1; y += 1; }
+            setViewYM([y, m]);
+        } else {
+            onSelect(addDays(selectedDate, delta * 7));
+        }
+    };
+    const toggle = () => {
+        if (!monthView) setViewYM([Number(selectedDate.slice(0, 4)), Number(selectedDate.slice(5, 7))]);
+        setMonthView(!monthView);
+    };
+    const arrow = { width: 34, height: 34, borderRadius: '50%', border: `2px solid ${T.ruled}`, background: '#fffdf6', cursor: 'pointer', fontSize: '0.8rem', color: T.ink, flexShrink: 0 };
+    const linkBtn = { fontFamily: FONT, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.92rem', padding: '4px 4px' };
+
+    return (
+        <Paper lined={false} style={{ padding: '14px 14px 12px', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                <Tape rotate={-2}>{label}</Tape>
+                <span style={{ flex: 1 }} />
+                <button type="button" style={arrow} onClick={() => step(-1)} aria-label={monthView ? 'Previous month' : 'Previous week'}>{'◀'}</button>
+                <button type="button" style={arrow} onClick={() => step(1)} aria-label={monthView ? 'Next month' : 'Next week'}>{'▶'}</button>
+                <button type="button" onClick={() => { onSelect(today); setViewYM([Number(today.slice(0, 4)), Number(today.slice(5, 7))]); }}
+                    style={{ ...linkBtn, borderBottom: '2px dashed #d9544a', color: '#d9544a' }}>today</button>
+                <button type="button" onClick={toggle} style={{ ...linkBtn, color: T.blue, textDecoration: 'underline' }}>{monthView ? 'week ▴' : 'month ▾'}</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5, marginBottom: 5 }}>
+                {DOW.map(d => <div key={d} style={{ textAlign: 'center', fontFamily: MARKER, fontSize: '0.7rem', color: T.pencil }}>{d}</div>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5 }}>
+                {monthView
+                    ? grid.map((date, idx) => (date
+                        ? <DayCell key={date} date={date} data={daysByDate[date]} selected={date === selectedDate} today={date === today} onClick={() => { onSelect(date); setMonthView(false); }} />
+                        : <div key={`b${idx}`} />))
+                    : week.map(date => <DayCell key={date} compact date={date} data={daysByDate[date]} selected={date === selectedDate} today={date === today} onClick={() => onSelect(date)} />)}
+            </div>
+            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 10, fontSize: '0.75rem', color: T.pencil, flexWrap: 'wrap', fontFamily: FONT }}>
+                <span><i style={dmark('#d9544a')} /> workout</span>
+                <span><i style={dmark(T.calorie)} /> food</span>
+                <span><i style={dmark(T.blue)} /> h2o</span>
+                <span><i style={dmark(T.sleep)} /> sleep</span>
+            </div>
+        </Paper>
+    );
+}
+
+/**
+ * Water, sleep and notes for one day, saved automatically a moment after each change
+ * (and right away if the app is closed or another day is picked).
+ * Mounted with key={date} so each day starts from the saved values.
+ */
+function DayExtras({ date, initial, onSaved }) {
+    const [water, setWater] = useState(initial.water);
+    const [sleep, setSleep] = useState(initial.sleep);
+    const [notes, setNotes] = useState(initial.notes);
+    const [status, setStatus] = useState(''); // '' | 'pending' | 'saving' | 'saved' | 'error'
+    const latest = useRef({ water: initial.water, sleep: initial.sleep, notes: initial.notes });
+    const dirty = useRef(false);
+    const timer = useRef(null);
+    const onSavedRef = useRef(onSaved);
+    useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
+
+    const save = useCallback(async () => {
+        clearTimeout(timer.current);
+        if (!dirty.current) return;
+        dirty.current = false;
+        const v = latest.current;
+        const body = { date, waterGlasses: v.water, sleepHours: v.sleep ? Number(v.sleep) : 0, notes: v.notes };
+        setStatus('saving');
+        try {
+            await axiosInstance.put(`${API_URL}/api/fitness/log`, body);
+            if (!dirty.current) setStatus('saved');
+            onSavedRef.current(date, { waterGlasses: body.waterGlasses, sleepHours: body.sleepHours, notes: body.notes });
+        } catch (e) {
+            console.error(e);
+            dirty.current = true;
+            setStatus('error');
+        }
+    }, [date]);
+
+    const change = (field, value, delay) => {
+        latest.current = { ...latest.current, [field]: value };
+        dirty.current = true;
+        setStatus('pending');
+        clearTimeout(timer.current);
+        timer.current = setTimeout(save, delay);
+    };
+
+    // Save immediately when the app goes to the background or this day is swapped out
+    useEffect(() => {
+        const onHide = () => { if (document.visibilityState === 'hidden') save(); };
+        document.addEventListener('visibilitychange', onHide);
+        return () => { document.removeEventListener('visibilitychange', onHide); save(); };
+    }, [save]);
+
+    const statusText = { pending: 'editing…', saving: 'saving…', saved: '✓ saved', error: 'not saved' }[status] || '';
+
+    return (
+        <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <MarkerTitle style={{ fontSize: '1.2rem' }}>Recovery</MarkerTitle>
+                <span style={{ flex: 1 }} />
+                <span role="status" style={{ fontFamily: FONT, fontSize: '0.8rem', color: status === 'error' ? T.margin : T.pencil }}>
+                    {statusText}
+                    {status === 'error' && <button type="button" onClick={() => { dirty.current = true; save(); }} style={{ fontFamily: FONT, fontSize: '0.8rem', background: 'none', border: 'none', color: T.blue, textDecoration: 'underline', cursor: 'pointer' }}>retry</button>}
+                </span>
+            </div>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 8 }}>
+                <div>
+                    <div style={{ fontFamily: FONT, fontSize: '0.8rem', color: T.pencil, marginBottom: 6 }}>water · {water}/8 glasses</div>
+                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <Cup key={i} filled={i < water} onClick={() => { const v = water === i + 1 ? i : i + 1; setWater(v); change('water', v, 500); }} />
+                        ))}
+                    </div>
+                </div>
+                <div style={{ width: 110 }}>
+                    <div style={{ fontFamily: FONT, fontSize: '0.8rem', color: T.pencil }}>sleep (hours)</div>
+                    <input type="number" step="0.5" min="0" max="24" inputMode="decimal" value={sleep} placeholder="0"
+                        onChange={(e) => { setSleep(e.target.value); change('sleep', e.target.value, 900); }}
+                        style={{ width: '100%', marginTop: 4, background: 'transparent', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1.15rem', color: T.ink, outline: 'none' }} />
+                </div>
+            </div>
+            <div style={{ marginTop: 18 }}>
+                <MarkerTitle style={{ fontSize: '1rem' }}>Notes</MarkerTitle>
+                <textarea rows={3} value={notes} onChange={(e) => { setNotes(e.target.value); change('notes', e.target.value, 1200); }} placeholder="how'd the day go? soreness, energy, wins..."
+                    style={{ width: '100%', marginTop: 8, background: 'rgba(255,255,255,0.35)', border: `1px dashed ${T.ruled}`, borderRadius: 6, fontFamily: FONT, fontSize: '1.05rem', color: T.ink, resize: 'vertical', outline: 'none', padding: '10px', boxSizing: 'border-box', lineHeight: 1.5 }} />
+            </div>
+        </div>
+    );
+}
+
 function Dashboard() {
     const { user, logout } = useAuth();
-    const now = new Date();
-    const [year, setYear] = useState(now.getFullYear());
-    const [month, setMonth] = useState(now.getMonth() + 1);
-    const [selectedDate, setSelectedDate] = useState(todayStr());
-    const [days, setDays] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(todayStr);
+    const [monthView, setMonthView] = useState(false);
+    const [viewYM, setViewYM] = useState(() => { const t = todayStr(); return [Number(t.slice(0, 4)), Number(t.slice(5, 7))]; });
+    const [daysByDate, setDaysByDate] = useState({});
+    const [loadedMonths, setLoadedMonths] = useState({});
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const [form, setForm] = useState({ water: 0, sleep: '', notes: '' });
     const [editingId, setEditingId] = useState(null);
     const [workoutVersion, setWorkoutVersion] = useState(0);
     const [streak, setStreak] = useState({ current: 0, best: 0 });
+    const [clips, setClips] = useState([]);
+    const [recorder, setRecorder] = useState(null); // { exercise, n } while the form-check recorder is open
+    const seenKey = `fitCoachSeen:${user?.id ?? 'me'}`;
+    const [seenAt, setSeenAt] = useState(() => Number(readStored(seenKey, '0')) || 0);
+    const historyRef = useRef(null);
+    const recorderRef = useRef(null);
 
-    const daysMap = useMemo(() => {
-        const m = {};
-        days.forEach(d => { m[d.date] = d; });
-        return m;
-    }, [days]);
-
-    const loadCalendar = useCallback(async (y, mo) => {
-        try {
-            const r = await axiosInstance.get(`${API_URL}/api/fitness/calendar`, { params: { year: y, month: mo } });
-            setDays(r.data.days);
-            setError('');
-        } catch (e) {
-            console.error(e);
-            setError('Could not load your journal.');
-        }
+    const mergeDays = useCallback((list, key) => {
+        setDaysByDate(prev => { const next = { ...prev }; list.forEach(d => { next[d.date] = d; }); return next; });
+        setLoadedMonths(prev => (prev[key] ? prev : { ...prev, [key]: true }));
     }, []);
 
-    const loadStreak = useCallback(async () => {
-        try {
-            const r = await axiosInstance.get(`${API_URL}/api/fitness/streak`);
-            setStreak({ current: r.data.current || 0, best: r.data.best || 0 });
-        } catch (e) { console.error(e); }
-    }, []);
+    // Months on screen: the selected week (may span two months), or the month being browsed
+    const visibleMonths = useMemo(() => {
+        const keys = monthView ? [`${viewYM[0]}-${pad(viewYM[1])}`] : weekOf(selectedDate).map(ymKey);
+        keys.push(ymKey(selectedDate));
+        return [...new Set(keys)].sort();
+    }, [monthView, viewYM, selectedDate]);
+    const visibleKey = visibleMonths.join(',');
 
     useEffect(() => {
-        (async () => {
-            try {
-                const r = await axiosInstance.get(`${API_URL}/api/fitness/overview`);
-                setProfile(r.data.profile);
-            } catch (e) { console.error(e); }
-            await loadCalendar(year, month);
-            await loadStreak();
-            setLoading(false);
-        })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => { loadCalendar(year, month); }, [year, month, loadCalendar]);
+        let cancelled = false;
+        visibleKey.split(',').forEach(key => {
+            fetchMonth(Number(key.slice(0, 4)), Number(key.slice(5, 7)))
+                .then(list => { if (!cancelled) { mergeDays(list, key); setError(''); } })
+                .catch(e => { console.error(e); if (!cancelled) setError('Could not load your journal.'); });
+        });
+        return () => { cancelled = true; };
+    }, [visibleKey, mergeDays]);
 
     useEffect(() => {
-        const d = daysMap[selectedDate];
-        if (d) {
-            setForm({
-                water: d.waterGlasses || 0,
-                sleep: d.sleepHours ? String(d.sleepHours) : '',
-                notes: d.notes || '',
-            });
-        }
-    }, [selectedDate, daysMap]);
+        let cancelled = false;
+        axiosInstance.get(`${API_URL}/api/fitness/overview`)
+            .then(r => { if (!cancelled) setProfile(r.data.profile); })
+            .catch(e => console.error(e))
+            .finally(() => { if (!cancelled) setLoading(false); });
+        fetchStreak().then(s => { if (!cancelled) setStreak(s); }).catch(e => console.error(e));
+        fetchMyClips().then(c => { if (!cancelled) setClips(c); }).catch(e => console.error(e));
+        return () => { cancelled = true; };
+    }, []);
 
-    const changeMonth = (delta) => {
-        let m = month + delta, y = year;
-        if (m < 1) { m = 12; y -= 1; }
-        if (m > 12) { m = 1; y += 1; }
-        setMonth(m); setYear(y);
+    const loadStreak = async () => { try { setStreak(await fetchStreak()); } catch (e) { console.error(e); } };
+    const reloadClips = async () => { try { setClips(await fetchMyClips()); } catch (e) { console.error(e); } };
+
+    // Re-read the selected day's month after something on it changed
+    const refresh = async () => {
+        const key = ymKey(selectedDate);
+        try { mergeDays(await fetchMonth(Number(key.slice(0, 4)), Number(key.slice(5, 7))), key); } catch (e) { console.error(e); }
+        await loadStreak();
     };
 
-    const goToday = () => {
-        const t = new Date();
-        setYear(t.getFullYear()); setMonth(t.getMonth() + 1); setSelectedDate(todayStr());
-    };
+    const onDaySaved = useCallback((date, values) => {
+        setDaysByDate(prev => ({ ...prev, [date]: { ...(prev[date] || { date, workouts: [], workoutCount: 0, caloriesConsumed: 0 }), ...values } }));
+        fetchStreak().then(setStreak).catch(e => console.error(e));
+    }, []);
 
-    const selectDay = (date) => { if (date) setSelectedDate(date); };
-    const refresh = async () => { await loadCalendar(year, month); await loadStreak(); };
+    const selectDay = (date) => { setSelectedDate(date); setEditingId(null); setRecorder(null); };
 
     const logWorkout = async (w) => {
         setBusy(true);
@@ -529,30 +705,34 @@ function Dashboard() {
         finally { setBusy(false); }
     };
 
-    const saveDay = async () => {
-        setBusy(true);
-        try {
-            await axiosInstance.put(`${API_URL}/api/fitness/log`, {
-                date: selectedDate,
-                waterGlasses: form.water,
-                sleepHours: form.sleep ? Number(form.sleep) : 0,
-                notes: form.notes,
-            });
-            await refresh();
-        } catch (e) { console.error(e); }
-        finally { setBusy(false); }
+    const openRecorder = (exercise) => {
+        setRecorder(r => ({ exercise, n: (r?.n || 0) + 1 }));
+        setTimeout(() => recorderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     };
 
-    const setFormField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+    const deleteClip = async (id) => {
+        if (!window.confirm('Delete this clip? Your coach will no longer see it.')) return;
+        try { await axiosInstance.delete(`/api/movement/clips/${id}`); await reloadClips(); }
+        catch (e) { console.error(e); }
+    };
 
-    const sel = daysMap[selectedDate] || {};
-    const grid = useMemo(() => buildGrid(year, month), [year, month]);
+    const markSeen = () => { const now = Date.now(); setSeenAt(now); writeStored(seenKey, String(now)); };
+    const unseen = clips.filter(c => c.status === 'reviewed' && c.coachNote && c.reviewedAt && new Date(c.reviewedAt).getTime() > seenAt).length;
+    const goToCoachNotes = () => {
+        historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        markSeen();
+    };
+
+    const sel = daysByDate[selectedDate] || {};
+    const dayLoaded = !!loadedMonths[ymKey(selectedDate)];
     const selLabel = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     const eaten = sel.caloriesConsumed || 0;
     const burned = (sel.workouts || []).reduce((s, w) => s + (Number(w.caloriesBurned) || 0), 0);
     const allowance = profile?.calorieTarget;
     const remaining = allowance != null ? allowance - eaten + burned : null;
     const goalLabel = { lose: 'lose fat', build: 'build muscle', maintain: 'maintain', endurance: 'endurance' }[profile?.goalType] || '';
+    const lastLift = [...(sel.workouts || [])].reverse().find(w => REPS_EXERCISES.has(w.type))?.type || 'Barbell Squat';
+    const smallLink = { fontFamily: FONT, fontSize: '0.85rem', background: 'none', border: 'none', color: T.blue, cursor: 'pointer', textDecoration: 'underline', padding: 2, flexShrink: 0 };
 
     if (loading) {
         return (
@@ -563,93 +743,56 @@ function Dashboard() {
     }
 
     return (
-        <div style={{ minHeight: '100vh', width: '100%', background: 'radial-gradient(1200px 700px at 50% -10%, #332a20, #211b15)', color: T.ink, fontFamily: FONT, padding: '24px 16px 60px', boxSizing: 'border-box' }}>
+        <div style={{ minHeight: '100vh', width: '100%', background: 'radial-gradient(1200px 700px at 50% -10%, #332a20, #211b15)', color: T.ink, fontFamily: FONT, padding: '20px 12px 60px', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
                 {/* HEADER */}
-                <Paper lined={false} style={{ padding: '20px 26px', marginBottom: 18 }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
+                <Paper lined={false} style={{ padding: '16px 22px', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                         <div>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
-                                <MarkerTitle style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)' }}>My Lift Journal</MarkerTitle>
+                                <MarkerTitle style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)' }}>My Lift Journal</MarkerTitle>
                                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 12, background: T.highYellow, opacity: 0.75, zIndex: -1 }} />
                             </div>
-                            <div style={{ color: T.pencil, fontSize: '0.95rem', marginTop: 8 }}>
+                            <div style={{ color: T.pencil, fontSize: '0.92rem', marginTop: 6 }}>
                                 {user?.first_name ? `Hey ${user.first_name} — ` : ''}
                                 {profile?.goalType ? `goal: ${profile.goalType} · keep showing up.` : 'log it, own it, rack it up.'}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
                                 <span style={{ fontFamily: MARKER, fontSize: '0.85rem', background: T.highYellow, padding: '3px 10px', borderRadius: 4, color: T.ink }}>
-                                    {streak.current > 0 ? `\u2605 ${streak.current}-day streak` : '\u2605 start your streak'}
+                                    {streak.current > 0 ? `★ ${streak.current}-day streak` : '★ start your streak'}
                                 </span>
                                 {streak.best > 0 && <span style={{ fontFamily: FONT, fontSize: '0.75rem', color: T.pencil }}>best: {streak.best} days</span>}
+                                {unseen > 0 && (
+                                    <button type="button" onClick={goToCoachNotes}
+                                        style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.highPink, border: `1px solid ${T.margin}`, borderRadius: 4, padding: '3px 10px', color: '#7a1f1f', cursor: 'pointer' }}>
+                                        {'✉'} coach replied{unseen > 1 ? ` (${unseen})` : ''}
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {['\u25C0', '\u25B6'].map((a, i) => (
-                                <button key={a} onClick={() => changeMonth(i === 0 ? -1 : 1)}
-                                    style={{ width: 38, height: 38, borderRadius: '50%', border: `2px solid ${T.ruled}`, background: '#fffdf6', cursor: 'pointer', fontSize: '0.9rem', color: T.ink }}>{a}</button>
-                            ))}
                             {user?.role === 'admin' && (
                                 <Link to="/fit/coach" style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.highPink, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '6px 10px', color: T.ink, textDecoration: 'none', whiteSpace: 'nowrap' }}>form check inbox</Link>
                             )}
-                            <button onClick={goToday} style={{ fontFamily: FONT, background: 'none', border: 'none', borderBottom: '2px dashed #d9544a', cursor: 'pointer', color: '#d9544a', fontSize: '0.95rem', padding: '4px 6px' }}>today</button>
                             <button onClick={logout} style={{ fontFamily: FONT, background: 'none', border: 'none', color: T.pencil, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline', padding: '4px 6px' }}>sign out</button>
                         </div>
                     </div>
-                    <div style={{ marginTop: 16 }}>
-                        <Tape rotate={-2}>{monthLabel(year, month)}</Tape>
-                    </div>
                 </Paper>
 
-                {error && <div style={{ fontFamily: FONT, color: '#d9544a', margin: '0 0 14px' }}>{error}</div>}
+                {error && <div style={{ fontFamily: FONT, color: '#f0a49c', margin: '0 0 12px' }}>{error}</div>}
 
                 {/* CALENDAR */}
-                <Paper lined={false} style={{ padding: '18px 16px', marginBottom: 22 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
-                        {DOW.map(d => <div key={d} style={{ textAlign: 'center', fontFamily: MARKER, fontSize: '0.72rem', color: T.pencil }}>{d}</div>)}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
-                        {grid.map((date, idx) => {
-                            if (!date) return <div key={`b${idx}`} style={{ minHeight: 74 }} />;
-                            const d = daysMap[date];
-                            const isToday = date === todayStr();
-                            const isSel = date === selectedDate;
-                            return (
-                                <button key={date} onClick={() => selectDay(date)}
-                                    style={{
-                                        minHeight: 74, borderRadius: 6, padding: 6, cursor: 'pointer', textAlign: 'center',
-                                        background: isSel ? T.highPink : (isToday ? T.highYellow : '#fffdf8'),
-                                        border: isSel ? `2px solid ${T.margin}` : `1px solid ${T.ruled}`,
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                    }}>
-                                    <span style={{ fontFamily: FONT, fontSize: '1.15rem', fontWeight: 700, color: T.ink }}>{Number(date.slice(8, 10))}</span>
-                                    <span style={{ display: 'flex', gap: 3, marginTop: 5, height: 8 }}>
-                                        {d?.workoutCount > 0 && <i style={dmark('#d9544a')} />}
-                                        {d?.waterGlasses > 0 && <i style={dmark(T.blue)} />}
-                                        {d?.sleepHours > 0 && <i style={dmark(T.sleep)} />}
-                                        {d?.caloriesConsumed > 0 && <i style={dmark(T.calorie)} />}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12, fontSize: '0.78rem', color: T.pencil, flexWrap: 'wrap' }}>
-                        <span><i style={dmark('#d9544a')} /> workout</span>
-                        <span><i style={dmark(T.blue)} /> h2o</span>
-                        <span><i style={dmark(T.sleep)} /> sleep</span>
-                        <span><i style={dmark(T.calorie)} /> food</span>
-                    </div>
-                </Paper>
+                <CalendarCard daysByDate={daysByDate} selectedDate={selectedDate} onSelect={selectDay}
+                    monthView={monthView} setMonthView={setMonthView} viewYM={viewYM} setViewYM={setViewYM} />
 
-                <Paper margin style={{ padding: '26px 28px 28px 58px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                        <Tape rotate={2}>{selLabel.toUpperCase()}</Tape>
-                    </div>
+                {/* THE DAY */}
+                <Paper margin style={{ padding: '22px 20px 26px 58px' }}>
+                    <Tape rotate={2}>{selLabel.toUpperCase()}</Tape>
 
                     {/* ENERGY BALANCE */}
-                    <div style={{ marginTop: 16, padding: '14px 16px', background: 'rgba(255,255,255,0.35)', border: `1px dashed ${T.ruled}`, borderRadius: 8 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', fontFamily: FONT }}>
+                    <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.35)', border: `1px dashed ${T.ruled}`, borderRadius: 8 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', alignItems: 'flex-start', fontFamily: FONT }}>
                             <div>
                                 <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: T.pencil, fontWeight: 700 }}>EATEN</div>
                                 <div style={{ fontSize: '1.35rem', fontWeight: 700, color: T.calorie }}>{eaten.toLocaleString()}<span style={{ fontSize: '0.8rem', color: T.pencil, fontWeight: 400 }}> kcal</span></div>
@@ -660,7 +803,7 @@ function Dashboard() {
                             </div>
                             <div>
                                 <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: T.pencil, fontWeight: 700 }}>ALLOWANCE</div>
-                                <div style={{ fontSize: '1.35rem', fontWeight: 700, color: T.ink }}>{allowance != null ? allowance.toLocaleString() : '\u2014'}<span style={{ fontSize: '0.8rem', color: T.pencil, fontWeight: 400 }}> kcal</span></div>
+                                <div style={{ fontSize: '1.35rem', fontWeight: 700, color: T.ink }}>{allowance != null ? allowance.toLocaleString() : '—'}<span style={{ fontSize: '0.8rem', color: T.pencil, fontWeight: 400 }}> kcal</span></div>
                             </div>
                         </div>
                         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1.05rem' }}>
@@ -674,76 +817,71 @@ function Dashboard() {
                         </div>
                     </div>
 
-                    {/* WORKOUT */}
-                    <div style={{ marginTop: 10 }}>
-                        <MarkerTitle style={{ fontSize: '1.2rem' }}>Workout</MarkerTitle>
-                        <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
-                            {sel.workouts?.length ? sel.workouts.map((w) => (
-                                <li key={w.id} style={{ padding: '6px 0', borderBottom: `1px dashed ${T.ruled}` }}>
-                                    {editingId === w.id ? (
-                                        <WorkoutForm onSave={updateWorkout} initial={w} onCancel={() => setEditingId(null)} busy={busy} weight={profile?.currentWeight} unit={profile?.unit} />
-                                    ) : (
-                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontFamily: FONT, fontSize: '1.05rem', color: T.inkSoft }}>
-                                            <span style={{ color: colorFor(w.type), fontWeight: 700, flexShrink: 0 }}>&bull;</span>
-                                            <span style={{ flex: 1 }}>{w.type} &mdash; {w.sets ? `${w.sets}\u00D7${w.reps}${w.load ? ` @ ${Math.round(w.load)} ${profile?.unit === 'metric' ? 'kg' : 'lb'}` : ''}` : `${w.durationMinutes} min`} &mdash; {w.caloriesBurned} kcal</span>
-                                            <button type="button" onClick={() => setEditingId(w.id)} style={{ fontFamily: FONT, fontSize: '0.8rem', background: 'none', border: 'none', color: T.blue, cursor: 'pointer', textDecoration: 'underline', padding: 2, flexShrink: 0 }}>edit</button>
-                                            <button type="button" onClick={() => deleteWorkout(w.id)} style={{ fontFamily: FONT, fontSize: '0.9rem', background: 'none', border: 'none', color: T.margin, cursor: 'pointer', padding: 2, flexShrink: 0 }}>&#10005;</button>
-                                        </div>
-                                    )}
-                                </li>
-                            )) : (
-                                <li style={{ fontFamily: FONT, color: T.pencil, fontSize: '0.95rem' }}>nothing logged &mdash; add a session below.</li>
-                            )}
-                        </ul>
-                        <WorkoutForm onSave={logWorkout} busy={busy} weight={profile?.currentWeight} unit={profile?.unit} />
+                    {/* FOOD + WORKOUT: side by side on wide screens, food first on phones */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '22px 32px', marginTop: 20 }}>
+                        <section>
+                            <MarkerTitle style={{ fontSize: '1.2rem' }}>Food</MarkerTitle>
+                            <FoodSection date={selectedDate} onChanged={refresh} />
+                        </section>
+
+                        <section>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                                <MarkerTitle style={{ fontSize: '1.2rem' }}>Workout</MarkerTitle>
+                                <span style={{ flex: 1 }} />
+                                {!recorder && <button type="button" onClick={() => openRecorder(lastLift)} style={smallLink}>{'📹'} film a set</button>}
+                            </div>
+                            <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+                                {sel.workouts?.length ? sel.workouts.map((w) => (
+                                    <li key={w.id} style={{ padding: '6px 0', borderBottom: `1px dashed ${T.ruled}` }}>
+                                        {editingId === w.id ? (
+                                            <WorkoutForm onSave={updateWorkout} initial={w} onCancel={() => setEditingId(null)} busy={busy} weight={profile?.currentWeight} unit={profile?.unit} />
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontFamily: FONT, fontSize: '1.05rem', color: T.inkSoft, flexWrap: 'wrap' }}>
+                                                <span style={{ color: colorFor(w.type), fontWeight: 700, flexShrink: 0 }}>&bull;</span>
+                                                <span style={{ flex: 1, minWidth: 150 }}>{w.type} &mdash; {w.sets ? `${w.sets}×${w.reps}${w.load ? ` @ ${Math.round(w.load)} ${profile?.unit === 'metric' ? 'kg' : 'lb'}` : ''}` : `${w.durationMinutes} min`} &mdash; {w.caloriesBurned} kcal</span>
+                                                {REPS_EXERCISES.has(w.type) && (
+                                                    <button type="button" onClick={() => openRecorder(w.type)} title="Film this lift and send it to your coach"
+                                                        style={{ fontFamily: FONT, fontSize: '0.8rem', background: '#fffdf6', border: `1px solid ${T.ruled}`, borderRadius: 50, padding: '2px 9px', color: T.ink, cursor: 'pointer', flexShrink: 0 }}>check form</button>
+                                                )}
+                                                <button type="button" onClick={() => setEditingId(w.id)} style={{ ...smallLink, fontSize: '0.8rem' }}>edit</button>
+                                                <button type="button" onClick={() => deleteWorkout(w.id)} aria-label="Delete workout" style={{ fontFamily: FONT, fontSize: '0.9rem', background: 'none', border: 'none', color: T.margin, cursor: 'pointer', padding: 2, flexShrink: 0 }}>&#10005;</button>
+                                            </div>
+                                        )}
+                                    </li>
+                                )) : (
+                                    <li style={{ fontFamily: FONT, color: T.pencil, fontSize: '0.95rem' }}>nothing logged &mdash; add a session below, then tap &ldquo;check form&rdquo; on a lift to send it to your coach.</li>
+                                )}
+                            </ul>
+                            <div ref={recorderRef}>
+                                {recorder && (
+                                    <FormCheckRecorder key={recorder.n} exerciseGroups={EXERCISE_GROUPS} initialExercise={recorder.exercise} date={selectedDate}
+                                        onSent={reloadClips} onClose={() => setRecorder(null)} />
+                                )}
+                            </div>
+                            <WorkoutForm onSave={logWorkout} busy={busy} weight={profile?.currentWeight} unit={profile?.unit} />
+                        </section>
                     </div>
 
-                    <div style={{ border: 'none', borderTop: `2px dashed ${T.ruled}`, margin: '18px 0' }} />
+                    <div style={{ borderTop: `2px dashed ${T.ruled}`, margin: '22px 0 18px' }} />
 
-                    {/* FORM CHECK */}
-                    <MarkerTitle style={{ fontSize: '1.2rem' }}>Form Check</MarkerTitle>
-                    <FormCheck exerciseGroups={EXERCISE_GROUPS} />
-
-                    <div style={{ border: 'none', borderTop: `2px dashed ${T.ruled}`, margin: '18px 0' }} />
-
-                    {/* FOOD */}
-                    <MarkerTitle style={{ fontSize: '1.2rem' }}>Food</MarkerTitle>
-                    <FoodSection date={selectedDate} onChanged={refresh} />
-
-                    {/* SLEEP */}
-                    <div style={{ marginTop: 20 }}>
-                        <MarkerTitle style={{ fontSize: '1rem' }}>Sleep</MarkerTitle>
-                        <input type="number" step="0.5" value={form.sleep} onChange={(e) => setFormField('sleep', e.target.value)} placeholder="0"
-                            style={{ width: '100%', marginTop: 6, background: 'transparent', border: 'none', borderBottom: `2px solid ${T.ruled}`, fontFamily: FONT, fontSize: '1.15rem', color: T.ink, outline: 'none' }} />
-                        <span style={{ fontFamily: FONT, fontSize: '0.8rem', color: T.pencil }}>hours</span>
-                    </div>
-
-                    {/* HYDRATION */}
-                    <div style={{ marginTop: 20 }}>
-                        <MarkerTitle style={{ fontSize: '1rem' }}>
-                            Hydration <span style={{ fontFamily: FONT, fontSize: '0.85rem', color: T.pencil, fontWeight: 400 }}>({form.water}/8 glasses)</span>
-                        </MarkerTitle>
-                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <Cup key={i} filled={i < form.water} onClick={() => setFormField('water', form.water === i + 1 ? i : i + 1)} />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* NOTES */}
-                    <div style={{ marginTop: 22 }}>
-                        <MarkerTitle style={{ fontSize: '1rem' }}>Notes</MarkerTitle>
-                        <textarea rows={4} value={form.notes} onChange={(e) => setFormField('notes', e.target.value)} placeholder="how'd the day go? soreness, energy, wins..."
-                            style={{ width: '100%', marginTop: 8, background: 'rgba(255,255,255,0.35)', border: `1px dashed ${T.ruled}`, borderRadius: 6, fontFamily: FONT, fontSize: '1.05rem', color: T.ink, resize: 'vertical', outline: 'none', padding: '10px', boxSizing: 'border-box', lineHeight: 1.5 }} />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 26 }}>
-                        <button onClick={saveDay} disabled={busy}
-                            style={{ fontFamily: MARKER, fontSize: '1rem', background: T.highGreen, border: '1px solid #9ccd7a', borderRadius: 8, padding: '10px 24px', cursor: 'pointer', color: T.ink, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
-                            {busy ? 'saving\u2026' : '\u2713 save day'}
-                        </button>
-                    </div>
+                    {/* RECOVERY + NOTES (autosaved) */}
+                    {dayLoaded ? (
+                        <DayExtras key={selectedDate} date={selectedDate} onSaved={onDaySaved}
+                            initial={{ water: sel.waterGlasses || 0, sleep: sel.sleepHours ? String(sel.sleepHours) : '', notes: sel.notes || '' }} />
+                    ) : (
+                        <div style={{ fontFamily: FONT, color: T.pencil }}>loading this day&hellip;</div>
+                    )}
                 </Paper>
+
+                {/* FORM CHECKS + COACH NOTES */}
+                {clips.length > 0 && (
+                    <div ref={historyRef} style={{ scrollMarginTop: 12 }}>
+                        <Paper style={{ padding: '22px 26px', marginTop: 22 }}>
+                            <MarkerTitle style={{ fontSize: '1.2rem' }}>Form checks &amp; coach notes</MarkerTitle>
+                            <FormCheckHistory clips={clips} seenAt={seenAt} onDelete={deleteClip} onMarkSeen={markSeen} />
+                        </Paper>
+                    </div>
+                )}
 
                 <RecordsSection unit={profile?.unit} key={workoutVersion} />
             </div>
