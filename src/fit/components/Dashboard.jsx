@@ -8,28 +8,85 @@ const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
 
 // MET values from the 2011 Compendium of Physical Activities.
 // Calories burned per minute = MET * 3.5 * bodyWeightKg / 200
+// Strength: heavy compound lifts 6.0, general resistance 5.0, isolation/machine 3.5,
+// vigorous bodyweight calisthenics 8.0, moderate bodyweight 3.8.
+// `group` = muscle group (Strength only). `reps: true` = logged as sets x reps
+// (every Strength exercise is reps-based automatically).
+const STRENGTH = {
+    Chest: [
+        ['Bench Press', 5.0], ['Incline Bench Press', 5.0], ['Decline Bench Press', 5.0],
+        ['Close-Grip Bench Press', 5.0], ['Dumbbell Bench Press', 5.0], ['Incline Dumbbell Press', 5.0],
+        ['Dumbbell Fly', 3.5], ['Cable Crossover', 3.5], ['Pec Deck', 3.5],
+        ['Machine Chest Press', 3.5], ['Push-ups', 3.8], ['Dips (chest)', 8.0],
+    ],
+    Back: [
+        ['Deadlift', 6.0], ['Barbell Row', 5.0], ['Pendlay Row', 6.0], ['Dumbbell Row', 5.0],
+        ['T-Bar Row', 5.0], ['Seated Cable Row', 3.5], ['Chest-Supported Row', 3.5],
+        ['Pull-ups', 8.0], ['Chin-ups', 8.0], ['Lat Pulldown', 3.5], ['Straight-Arm Pulldown', 3.5],
+        ['Inverted Row', 3.8], ['Rack Pull', 6.0], ['Back Extension', 3.5], ['Good Morning', 5.0],
+    ],
+    Shoulders: [
+        ['Overhead Press', 5.0], ['Seated Dumbbell Press', 5.0], ['Arnold Press', 5.0],
+        ['Push Press', 6.0], ['Machine Shoulder Press', 3.5], ['Lateral Raise', 3.5],
+        ['Cable Lateral Raise', 3.5], ['Front Raise', 3.5], ['Rear Delt Fly', 3.5],
+        ['Face Pull', 3.5], ['Upright Row', 3.5], ['Barbell Shrug', 3.5], ['Dumbbell Shrug', 3.5],
+    ],
+    Biceps: [
+        ['Dumbbell Curls', 3.5], ['Barbell Curl', 3.5], ['EZ-Bar Curl', 3.5], ['Hammer Curl', 3.5],
+        ['Incline Dumbbell Curl', 3.5], ['Preacher Curl', 3.5], ['Concentration Curl', 3.5],
+        ['Cable Curl', 3.5], ['Spider Curl', 3.5],
+    ],
+    Triceps: [
+        ['Tricep Pushdown', 3.5], ['Rope Pushdown', 3.5], ['Overhead Tricep Extension', 3.5],
+        ['Skull Crushers', 3.5], ['Dips (triceps)', 8.0], ['Bench Dips', 3.8],
+        ['Tricep Kickback', 3.5], ['Diamond Push-ups', 3.8],
+    ],
+    Forearms: [
+        ['Wrist Curl', 3.5], ['Reverse Wrist Curl', 3.5], ['Reverse Curl', 3.5], ["Farmer's Carry", 6.0],
+    ],
+    Quads: [
+        ['Barbell Squat', 5.0], ['Front Squat', 6.0], ['Goblet Squat', 5.0], ['Hack Squat', 5.0],
+        ['Leg Press', 5.0], ['Bulgarian Split Squat', 5.0], ['Lunges', 5.0], ['Walking Lunges', 5.0],
+        ['Step-ups', 5.0], ['Leg Extension', 3.5], ['Sissy Squat', 3.8], ['Pistol Squat', 8.0],
+    ],
+    'Hamstrings & Glutes': [
+        ['Romanian Deadlift', 6.0], ['Stiff-Leg Deadlift', 6.0], ['Sumo Deadlift', 6.0],
+        ['Trap Bar Deadlift', 6.0], ['Hip Thrust', 5.0], ['Glute Bridge', 3.8],
+        ['Lying Leg Curl', 3.5], ['Seated Leg Curl', 3.5], ['Nordic Curl', 8.0],
+        ['Cable Kickback', 3.5], ['Hip Abduction Machine', 3.5], ['Hip Adduction Machine', 3.5],
+    ],
+    Calves: [
+        ['Standing Calf Raise', 3.5], ['Seated Calf Raise', 3.5], ['Leg Press Calf Raise', 3.5],
+    ],
+    'Olympic & Power': [
+        ['Power Clean', 6.0], ['Hang Clean', 6.0], ['Clean and Jerk', 6.0], ['Snatch', 6.0],
+        ['Thruster', 6.0], ['Box Jumps', 8.0], ['Sled Push', 8.0],
+    ],
+};
+
 const EXERCISES = [
-    { name: 'Barbell Squat', met: 5.0, cat: 'Strength' },
-    { name: 'Deadlift', met: 6.0, cat: 'Strength' },
-    { name: 'Bench Press', met: 5.0, cat: 'Strength' },
-    { name: 'Overhead Press', met: 5.0, cat: 'Strength' },
-    { name: 'Barbell Row', met: 5.0, cat: 'Strength' },
-    { name: 'Pull-ups', met: 8.0, cat: 'Strength' },
-    { name: 'Lunges', met: 5.0, cat: 'Strength' },
-    { name: 'Dumbbell Curls', met: 3.5, cat: 'Strength' },
+    ...Object.entries(STRENGTH).flatMap(([group, list]) =>
+        list.map(([name, met]) => ({ name, met, cat: 'Strength', group }))),
     { name: 'Plank', met: 3.0, cat: 'Core' },
-    { name: 'Sit-ups', met: 3.8, cat: 'Core' },
+    { name: 'Side Plank', met: 3.0, cat: 'Core' },
+    { name: 'Sit-ups', met: 3.8, cat: 'Core', reps: true },
+    { name: 'Crunches', met: 3.8, cat: 'Core', reps: true },
+    { name: 'Hanging Leg Raise', met: 3.8, cat: 'Core', reps: true },
+    { name: 'Cable Crunch', met: 3.5, cat: 'Core', reps: true },
+    { name: 'Ab Wheel Rollout', met: 3.8, cat: 'Core', reps: true },
+    { name: 'Russian Twist', met: 3.8, cat: 'Core', reps: true },
+    { name: 'Pallof Press', met: 3.5, cat: 'Core', reps: true },
     { name: 'Running (6 mph)', met: 9.8, cat: 'Cardio' },
     { name: 'Running (8 mph)', met: 11.8, cat: 'Cardio' },
     { name: 'Walking (brisk)', met: 4.3, cat: 'Cardio' },
-    { name: 'Cycling (12\u201314 mph)', met: 8.0, cat: 'Cardio' },
+    { name: 'Cycling (12–14 mph)', met: 8.0, cat: 'Cardio' },
     { name: 'Rowing (moderate)', met: 7.0, cat: 'Cardio' },
     { name: 'Jump Rope', met: 11.8, cat: 'Cardio' },
     { name: 'Stair Climber', met: 8.8, cat: 'Cardio' },
     { name: 'Elliptical', met: 5.0, cat: 'Cardio' },
     { name: 'Swimming (freestyle)', met: 5.8, cat: 'Cardio' },
-    { name: 'Burpees', met: 8.0, cat: 'HIIT' },
-    { name: 'Kettlebell Swings', met: 9.8, cat: 'HIIT' },
+    { name: 'Burpees', met: 8.0, cat: 'HIIT', reps: true },
+    { name: 'Kettlebell Swings', met: 9.8, cat: 'HIIT', reps: true },
     { name: 'Boxing (bag)', met: 5.5, cat: 'HIIT' },
     { name: 'HIIT Circuit', met: 10.0, cat: 'HIIT' },
     { name: 'Yoga', met: 2.5, cat: 'Mobility' },
@@ -40,6 +97,12 @@ const EXERCISES = [
 const CATEGORIES = ['Strength', 'Core', 'Cardio', 'HIIT', 'Mobility'];
 const CATEGORY_COLOR = { Strength: '#d9544a', Core: '#b08d2f', Cardio: '#3f6fb5', HIIT: '#d9773f', Mobility: '#5f8f52' };
 
+// Dropdown sections: Strength is split by muscle group, the rest by category.
+const EXERCISE_GROUPS = [
+    ...Object.keys(STRENGTH).map(g => ({ label: `Strength — ${g}`, items: EXERCISES.filter(e => e.group === g) })),
+    ...CATEGORIES.filter(c => c !== 'Strength').map(c => ({ label: c, items: EXERCISES.filter(e => e.cat === c) })),
+];
+
 const weightToKg = (weight, unit) => (unit === 'metric' ? Number(weight) : Number(weight) * 0.453592);
 const kcalPerMin = (met, weight, unit) => met * 3.5 * weightToKg(weight, unit) / 200;
 
@@ -49,10 +112,7 @@ const colorFor = (name) => {
 };
 
 // Exercises recorded as sets x reps (everything else is duration-based)
-const REPS_EXERCISES = new Set([
-    'Barbell Squat', 'Deadlift', 'Bench Press', 'Overhead Press', 'Barbell Row',
-    'Pull-ups', 'Lunges', 'Dumbbell Curls', 'Sit-ups', 'Burpees', 'Kettlebell Swings',
-]);
+const REPS_EXERCISES = new Set(EXERCISES.filter(e => e.cat === 'Strength' || e.reps).map(e => e.name));
 const SECONDS_PER_SET = 45; // rough active time per working set for the MET baseline
 const LIFT_DISTANCE = 0.6;      // average meters the bar travels per rep
 const MUSCLE_EFFICIENCY = 0.22; // ~22% of energy burned becomes mechanical work
@@ -141,9 +201,9 @@ function WorkoutForm({ onSave, busy, weight, unit, initial, onCancel }) {
                 <div style={{ flex: '1 1 200px', minWidth: 160 }}>
                     <div style={lbl}>Exercise</div>
                     <select value={exName} onChange={(e) => setExName(e.target.value)} style={inp}>
-                        {CATEGORIES.map(c => (
-                            <optgroup key={c} label={c}>
-                                {EXERCISES.filter(e => e.cat === c).map(e => <option key={e.name} value={e.name}>{e.name}</option>)}
+                        {EXERCISE_GROUPS.map(g => (
+                            <optgroup key={g.label} label={g.label}>
+                                {g.items.map(e => <option key={e.name} value={e.name}>{e.name}</option>)}
                             </optgroup>
                         ))}
                     </select>
