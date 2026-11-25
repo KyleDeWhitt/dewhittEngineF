@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import { T, FONT, MARKER, Paper, MarkerTitle, Tape, Highlight } from '../theme';
+import FormCheck from '../movement/FormCheck';
 import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_FIT_API_URL || 'http://localhost:3000';
@@ -589,6 +590,9 @@ function Dashboard() {
                                 <button key={a} onClick={() => changeMonth(i === 0 ? -1 : 1)}
                                     style={{ width: 38, height: 38, borderRadius: '50%', border: `2px solid ${T.ruled}`, background: '#fffdf6', cursor: 'pointer', fontSize: '0.9rem', color: T.ink }}>{a}</button>
                             ))}
+                            {user?.role === 'admin' && (
+                                <Link to="/fit/coach" style={{ fontFamily: MARKER, fontSize: '0.8rem', background: T.highPink, border: `1px solid ${T.ruled}`, borderRadius: 6, padding: '6px 10px', color: T.ink, textDecoration: 'none', whiteSpace: 'nowrap' }}>form check inbox</Link>
+                            )}
                             <button onClick={goToday} style={{ fontFamily: FONT, background: 'none', border: 'none', borderBottom: '2px dashed #d9544a', cursor: 'pointer', color: '#d9544a', fontSize: '0.95rem', padding: '4px 6px' }}>today</button>
                             <button onClick={logout} style={{ fontFamily: FONT, background: 'none', border: 'none', color: T.pencil, cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline', padding: '4px 6px' }}>sign out</button>
                         </div>
@@ -693,6 +697,12 @@ function Dashboard() {
                         </ul>
                         <WorkoutForm onSave={logWorkout} busy={busy} weight={profile?.currentWeight} unit={profile?.unit} />
                     </div>
+
+                    <div style={{ border: 'none', borderTop: `2px dashed ${T.ruled}`, margin: '18px 0' }} />
+
+                    {/* FORM CHECK */}
+                    <MarkerTitle style={{ fontSize: '1.2rem' }}>Form Check</MarkerTitle>
+                    <FormCheck exerciseGroups={EXERCISE_GROUPS} />
 
                     <div style={{ border: 'none', borderTop: `2px dashed ${T.ruled}`, margin: '18px 0' }} />
 
